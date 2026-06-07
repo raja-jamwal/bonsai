@@ -1,0 +1,28 @@
+appId: com.bonsai.app
+productName: Bonsai
+directories:
+  output: dist
+  buildResources: build
+
+# App files. electron-builder auto-includes production node_modules (so the
+# external better-sqlite3 / uuid required by the main bundle ship too); we just
+# add the built output.
+files:
+  - out/**
+  - package.json
+
+# better-sqlite3 is a native addon — its .node can't run from inside the asar,
+# so unpack the whole package.
+asarUnpack:
+  - "**/node_modules/better-sqlite3/**"
+
+mac:
+  category: public.app-category.developer-tools
+  target:
+    - target: dmg
+  # Local/unsigned build: skip code signing (no Developer ID). The app will
+  # need a right-click → Open the first time (Gatekeeper).
+  identity: null
+
+dmg:
+  title: ${productName} ${version}

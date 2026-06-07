@@ -223,7 +223,9 @@ export const IPC = {
   attachmentRemove: 'attachment:remove',
   pickDirectory: 'dialog:pickDirectory',
   pickFiles: 'dialog:pickFiles',
+  pickClaudeBinary: 'dialog:pickClaudeBinary',
   engineStatus: 'engine:status',
+  engineSetClaudePath: 'engine:setClaudePath',
 } as const;
 
 /**
@@ -263,7 +265,11 @@ export interface BridgeApi {
   removeAttachment(args: RemoveAttachmentArgs): Promise<void>;
   pickDirectory(): Promise<string | null>;
   pickFiles(): Promise<string[]>;
+  /** Open an OS file picker for the claude executable; returns its path or null. */
+  pickClaudeBinary(): Promise<string | null>;
   engineStatus(): Promise<EngineStatus>;
+  /** Validate + persist a user-chosen claude path; returns the new EngineStatus. */
+  setClaudePath(path: string): Promise<EngineStatus>;
   onTurnEvent(assistantNodeId: string, handler: TurnEventHandler): () => void;
 }
 

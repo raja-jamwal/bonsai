@@ -150,4 +150,13 @@ describe('Repo — directory scoping (RC-3)', () => {
     repo.addAttachment({ conversationId: convId, nodeId: null, dirPath: '/whole/conv/dir' });
     expect(repo.effectiveDirs(leaf.id)).toContain('/whole/conv/dir');
   });
+
+  it('persists app settings in the meta table (e.g. the resolved claude path)', () => {
+    expect(repo.getSetting('claude_path')).toBeNull();
+    repo.setSetting('claude_path', '/usr/local/bin/claude');
+    expect(repo.getSetting('claude_path')).toBe('/usr/local/bin/claude');
+    // Upsert overwrites, doesn't duplicate.
+    repo.setSetting('claude_path', '/opt/homebrew/bin/claude');
+    expect(repo.getSetting('claude_path')).toBe('/opt/homebrew/bin/claude');
+  });
 });

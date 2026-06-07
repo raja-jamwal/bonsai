@@ -66,11 +66,16 @@ export function buildPromptFromThread(thread: ThreadMessage[]): string {
 const SIGKILL_TIMEOUT_MS = 3000;
 
 export class ClaudeRunner {
-  private readonly claudePath: string;
+  private claudePath: string;
   // Map of nodeId -> in-flight child process (CL-7).
   private readonly children = new Map<string, ChildProcessWithoutNullStreams>();
 
   constructor(claudePath: string) {
+    this.claudePath = claudePath;
+  }
+
+  /** Update the resolved binary path (after the user locates it at runtime). */
+  setClaudePath(claudePath: string): void {
     this.claudePath = claudePath;
   }
 

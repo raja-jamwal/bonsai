@@ -36,6 +36,7 @@ let win: BrowserWindow | null = null;
  */
 function createWindow(): void {
   win = new BrowserWindow({
+    title: 'Bonsai',
     width: 1280,
     height: 800,
     show: false,
@@ -74,9 +75,11 @@ void app.whenReady().then(async () => {
 
   const repo = new Repo(db);
 
-  // CL-10: resolve the claude binary up front; status is surfaced to the renderer
-  // via engine:status rather than failing silently mid-turn.
-  const status: EngineStatus = await resolveClaude();
+  // CL-10: resolve the claude binary up front. Prefer the path the user saved in
+  // SQLite (survives restarts and a stripped PATH in a packaged app), else fall
+  // back to PATH detection. Status is surfaced to the renderer via engine:status;
+  // if unresolved, the renderer offers a locate dialog (engine:setClaudePath).
+  let status: EngineStatus = await resolveClaude(repo.getSetting('claude_path'));
   const runner = new ClaudeRunner(status.claudePath ?? 'claude');
 
   createWindow();
@@ -85,6 +88,9 @@ void app.whenReady().then(async () => {
     repo,
     runner,
     engineStatus: () => status,
+    setEngineStatus: (s) => {
+      status = s;
+    },
     getWindow: () => win,
   });
 

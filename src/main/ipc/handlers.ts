@@ -34,12 +34,14 @@ import type { ClaudeRunner } from '../claude/runner.js';
 import type { TurnResult } from '../claude/parser.js';
 import { validateDir, neutralTempDir } from '../paths.js';
 import { generateTitle } from '../claude/title.js';
+import { validateClaudePath } from '../claude/resolve.js';
 
 /** Dependencies the IPC layer composes against (injected from index.ts). */
 export interface IpcDeps {
   repo: Repo;
   runner: ClaudeRunner;
   engineStatus: () => EngineStatus;
+  setEngineStatus: (status: EngineStatus) => void;
   getWindow: () => BrowserWindow | null;
 }
 
@@ -308,8 +310,40 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     return result.filePaths;
   });
 
+  // dialog:pickClaudeBinary — OS file picker for the claude executable; returns
+  // its path (or null). On macOS, allow hidden files so ~/.claude/local is
+  // reachable and don't treat .app-style bundles as opaque.
+  ipcMain.handle(IPC.pickClaudeBinary, async (): Promise<string | null> => {
+    const win = getWindow();
+    const opts: Electron.OpenDialogOptions = {
+      title: 'Locate the claude executable',
+      properties: ['openFile', 'showHiddenFiles', 'treatPackageAsDirectory'],
+    };
+    const result = win
+      ? await dialog.showOpenDialog(win, opts)
+      : await dialog.showOpenDialog(opts);
+    if (result.canceled || result.filePaths.length === 0) return null;
+    return result.filePaths[0];
+  });
+
   // engine:status (CL-10): surface the resolved binary health to the renderer.
   ipcMain.handle(IPC.engineStatus, (): EngineStatus => engineStatus());
+
+  // engine:setClaudePath — validate a user-chosen binary; on success persist it
+  // (meta table, so it survives restarts and a stripped PATH), point the runner
+  // at it, and update the cached status. Invalid paths are NOT stored.
+  ipcMain.handle(
+    IPC.engineSetClaudePath,
+    async (_e, path: string): Promise<EngineStatus> => {
+      const status = await validateClaudePath(path);
+      if (status.ok && status.claudePath) {
+        repo.setSetting('claude_path', status.claudePath);
+        runner.setClaudePath(status.claudePath);
+      }
+      deps.setEngineStatus(status);
+      return status;
+    }
+  );
 }
 
 /** Derive a concise conversation title from the first user message. */

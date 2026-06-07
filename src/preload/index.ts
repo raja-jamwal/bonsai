@@ -124,6 +124,12 @@ const api: BridgeApi = {
 
   pickFiles: (): Promise<string[]> => ipcRenderer.invoke(IPC.pickFiles),
 
+  pickClaudeBinary: (): Promise<string | null> =>
+    ipcRenderer.invoke(IPC.pickClaudeBinary),
+
+  setClaudePath: (path: string): Promise<EngineStatus> =>
+    ipcRenderer.invoke(IPC.engineSetClaudePath, path),
+
   // CL-10 diagnostics surface for the resolved `claude` binary.
   engineStatus: (): Promise<EngineStatus> =>
     ipcRenderer.invoke(IPC.engineStatus),

@@ -1,7 +1,7 @@
 {
-  "name": "branching-claude",
+  "name": "bonsai",
   "version": "0.1.0",
-  "description": "Branching Claude Desktop — a tree-structured conversation client for the Claude CLI",
+  "description": "Bonsai — a tree-structured, branching conversation client for the Claude CLI",
   "main": "out/main/index.js",
   "author": "",
   "license": "MIT",

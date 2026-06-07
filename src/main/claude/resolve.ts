@@ -9,17 +9,52 @@ import { platform } from 'node:process';
 import type { EngineStatus } from '@shared/types';
 
 /**
+ * Validate a specific `claude` path by probing `<path> --version`. Used for a
+ * user-selected binary (from the locate dialog) and for the stored path. Returns
+ * an EngineStatus pinned to that path — ok with the version, or a path-specific
+ * error. Never throws.
+ */
+export async function validateClaudePath(claudePath: string): Promise<EngineStatus> {
+  const probe = await runCapture(claudePath, ['--version']);
+  if (probe.error || probe.code !== 0) {
+    return {
+      claudePath,
+      claudeVersion: null,
+      ok: false,
+      error:
+        `'${claudePath}' is not a runnable claude CLI` +
+        (probe.stderr.trim() ? `: ${probe.stderr.trim()}` : '.'),
+    };
+  }
+  return {
+    claudePath,
+    claudeVersion: probe.stdout.trim() || probe.stderr.trim() || null,
+    ok: true,
+    error: null,
+  };
+}
+
+/**
  * Resolve the `claude` CLI: find its path and version (CL-10).
  *
  * Strategy:
- *  1. Use the platform locator (`which` / `where`) to find the binary on PATH.
- *  2. Probe `claude --version` to confirm it is runnable and capture the version
- *     string.
+ *  0. If a `preferredPath` is given (the path saved in SQLite) and it still
+ *     runs, use it — survives restarts and works when PATH is stripped (e.g. a
+ *     packaged app launched from Finder).
+ *  1. Otherwise use the platform locator (`which` / `where`) to find it on PATH.
+ *  2. Probe `--version` to confirm it is runnable and capture the version.
  *
  * Never throws: all failure modes are reported through EngineStatus.ok=false
- * with an actionable `error` message.
+ * with an actionable `error` message (the renderer then offers a locate dialog).
  */
-export async function resolveClaude(): Promise<EngineStatus> {
+export async function resolveClaude(preferredPath?: string | null): Promise<EngineStatus> {
+  // Step 0: a stored/preferred path wins if it still works.
+  if (preferredPath) {
+    const stored = await validateClaudePath(preferredPath);
+    if (stored.ok) return stored;
+    // else fall through — the stored path may be stale; try PATH next.
+  }
+
   // Step 1: locate the binary on PATH. `where` on Windows, `which` elsewhere.
   const locator = platform === 'win32' ? 'where' : 'which';
   const located = await runCapture(locator, ['claude']);
@@ -32,8 +67,8 @@ export async function resolveClaude(): Promise<EngineStatus> {
       // Actionable error (CL-10): tell the user how to fix it.
       error:
         "Could not find the 'claude' CLI on your PATH. Install it with " +
-        "'npm install -g @anthropic-ai/claude-code' (or ensure it is on PATH), " +
-        'then restart the app.',
+        "'npm install -g @anthropic-ai/claude-code', or locate the binary " +
+        'manually below.',
     };
   }
 

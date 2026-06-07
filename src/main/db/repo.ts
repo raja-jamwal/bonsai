@@ -196,6 +196,24 @@ export class Repo {
     this.db.prepare(`UPDATE nodes SET title = ? WHERE id = ?`).run(title, nodeId);
   }
 
+  /** Read an app setting from the `meta` table (DB-6). */
+  getSetting(key: string): string | null {
+    const row = this.db
+      .prepare(`SELECT value FROM meta WHERE key = ?`)
+      .get(key) as { value: string } | undefined;
+    return row?.value ?? null;
+  }
+
+  /** Write an app setting to the `meta` table (e.g. the resolved claude path). */
+  setSetting(key: string, value: string): void {
+    this.db
+      .prepare(
+        `INSERT INTO meta (key, value) VALUES (?, ?)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+      )
+      .run(key, value);
+  }
+
   /** Cascades to nodes and attachments via ON DELETE CASCADE (DB-3). */
   deleteConversation(id: string): void {
     this.stmts.deleteConversation.run(id);

@@ -13,6 +13,7 @@ import { useStore } from './state/store';
 import { api } from './api';
 import { Sidebar } from './components/Sidebar';
 import { ConversationPane } from './components/ConversationPane';
+import { EngineSetupModal } from './components/EngineSetupModal';
 import { Icon } from './components/Icon';
 import type { EngineStatus } from '@shared/types';
 
@@ -51,28 +52,9 @@ export function App() {
 
   return (
     <>
-      {/* Engine-status banner (CL-10): only when not ok. */}
+      {/* Engine setup modal (CL-10): blocks until the claude binary is located. */}
       {engine && !engine.ok ? (
-        <div
-          role="alert"
-          style={{
-            padding: '8px 16px',
-            background: 'var(--brand-tint)',
-            color: 'var(--fork-ink)',
-            borderBottom: '1px solid var(--brand-tint-2)',
-            fontSize: 'var(--fs-ui)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-          }}
-        >
-          <Icon name="git-branch" size={14} />
-          <span>
-            Claude engine unavailable
-            {engine.error ? `: ${engine.error}` : '.'} Check that the{' '}
-            <code>claude</code> CLI is installed and on PATH.
-          </span>
-        </div>
+        <EngineSetupModal engine={engine} onResolved={setEngine} />
       ) : null}
 
       <main className="app-shell">
