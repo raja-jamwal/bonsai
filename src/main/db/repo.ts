@@ -20,7 +20,7 @@ function nowMs(): number {
 export class Repo {
   private readonly db: Database.Database;
 
-  // Prepared statements are built once and reused (NF-2: avoid re-compiling).
+  // Prepared statements are built once and reused (avoid re-compiling).
   private readonly stmts: {
     insertConversation: Database.Statement;
     listConversations: Database.Statement;
@@ -90,7 +90,7 @@ export class Repo {
            (@id, @conversation_id, @parent_id, @role, @content, @status, @model, @title,
             @input_tokens, @output_tokens, @cost_usd, @error_text, @created_at, @completed_at)`
       ),
-      // DB-4: periodic checkpoint of partial content while streaming.
+      // Periodic checkpoint of partial content while streaming.
       checkpointAssistant: db.prepare(
         `UPDATE nodes SET content = @content WHERE id = @id AND status = 'streaming'`
       ),
@@ -107,7 +107,7 @@ export class Repo {
           WHERE id = @id`
       ),
       deleteNode: db.prepare(`DELETE FROM nodes WHERE id = ?`),
-      // RC-2: recursive CTE, root-first.
+      // Recursive CTE, root-first.
       thread: db.prepare(
         `WITH RECURSIVE thread(id, parent_id, role, content, depth) AS (
            SELECT id, parent_id, role, content, 0
@@ -118,7 +118,7 @@ export class Repo {
          )
          SELECT role, content FROM thread ORDER BY depth DESC`
       ),
-      // RC-3: attachments whose node_id is on the active branch path
+      // Attachments whose node_id is on the active branch path
       // (ancestor-or-self of the leaf) OR null (whole-conversation), ordered
       // by added_at. The leaf's conversation is derived from the leaf node.
       effectiveDirs: db.prepare(
@@ -143,7 +143,7 @@ export class Repo {
 
   // -- Conversations -------------------------------------------------------
 
-  /** BR-2 "New conversation": insert a conversations row (no nodes yet). */
+  /** "New conversation": insert a conversations row (no nodes yet). */
   createConversation(args: { title?: string; model?: string }): string {
     const id = uuidv4();
     const ts = nowMs();
@@ -157,7 +157,7 @@ export class Repo {
     return id;
   }
 
-  /** Newest-updated first (DB-3). */
+  /** Newest-updated first. */
   listConversations(): ConversationSummary[] {
     return this.stmts.listConversations.all() as ConversationSummary[];
   }
@@ -186,7 +186,7 @@ export class Repo {
     this.stmts.renameConversation.run({ id, title, updated_at: nowMs() });
   }
 
-  /** Set the conversation's default model for new turns (DB-5: per-conversation). */
+  /** Set the conversation's default model for new turns (per-conversation). */
   setModel(id: string, model: string | null): void {
     this.stmts.setModel.run({ id, model, updated_at: nowMs() });
   }
@@ -196,7 +196,7 @@ export class Repo {
     this.db.prepare(`UPDATE nodes SET title = ? WHERE id = ?`).run(title, nodeId);
   }
 
-  /** Read an app setting from the `meta` table (DB-6). */
+  /** Read an app setting from the `meta` table. */
   getSetting(key: string): string | null {
     const row = this.db
       .prepare(`SELECT value FROM meta WHERE key = ?`)
@@ -214,7 +214,7 @@ export class Repo {
       .run(key, value);
   }
 
-  /** Cascades to nodes and attachments via ON DELETE CASCADE (DB-3). */
+  /** Cascades to nodes and attachments via ON DELETE CASCADE. */
   deleteConversation(id: string): void {
     this.stmts.deleteConversation.run(id);
   }
@@ -225,7 +225,7 @@ export class Repo {
     return this.stmts.getNode.get(id) as MessageNode | undefined;
   }
 
-  /** RC-2: root-first thread for a leaf, as role/content pairs. */
+  /** Root-first thread for a leaf, as role/content pairs. */
   getThread(leafId: string): { role: 'user' | 'assistant'; content: string }[] {
     return this.stmts.thread.all({ leaf_id: leafId }) as {
       role: 'user' | 'assistant';
@@ -234,7 +234,7 @@ export class Repo {
   }
 
   /**
-   * RC-3: effective directory set for the turn ending at `leafId`. Attachments
+   * Effective directory set for the turn ending at `leafId`. Attachments
    * on the active branch path (ancestor-or-self) plus whole-conversation
    * attachments (node_id NULL), ordered by added_at.
    */
@@ -246,8 +246,8 @@ export class Repo {
   }
 
   /**
-   * Insert a user node and advance the active leaf (BR-2 append/branch).
-   * BR-1: a user node's parent must be an assistant node or NULL (root);
+   * Insert a user node and advance the active leaf (append/branch).
+   * A user node's parent must be an assistant node or NULL (root);
    * anything else is rejected.
    */
   insertUserNode(args: {
@@ -256,7 +256,7 @@ export class Repo {
     content: string;
   }): MessageNode {
     const tx = this.db.transaction((): MessageNode => {
-      // BR-1 alternation enforcement.
+      // Alternation enforcement.
       if (args.parentId !== null) {
         const parent = this.getNode(args.parentId);
         if (!parent) {
@@ -264,7 +264,7 @@ export class Repo {
         }
         if (parent.role !== 'assistant') {
           throw new Error(
-            'BR-1: a user node may only be a child of an assistant node (or root)'
+            'a user node may only be a child of an assistant node (or root)'
           );
         }
       }
@@ -289,7 +289,7 @@ export class Repo {
         completed_at: ts,
       };
       this.stmts.insertNode.run(node);
-      // BR-2: appending/branching advances the active leaf and touches updated_at.
+      // Appending/branching advances the active leaf and touches updated_at.
       this.stmts.setActiveLeaf.run({
         id: args.conversationId,
         leaf: id,
@@ -301,8 +301,8 @@ export class Repo {
   }
 
   /**
-   * Insert a streaming assistant node (DB-4). Its parent must be a user node
-   * (BR-1). The active leaf is advanced only on completion (completeAssistant),
+   * Insert a streaming assistant node. Its parent must be a user node.
+   * The active leaf is advanced only on completion (completeAssistant),
    * not here, so an in-flight turn doesn't hijack the rendered path mid-stream.
    */
   insertStreamingAssistant(args: {
@@ -315,10 +315,10 @@ export class Repo {
       if (!parent) {
         throw new Error(`Parent node not found: ${args.parentId}`);
       }
-      // BR-1 alternation enforcement.
+      // Alternation enforcement.
       if (parent.role !== 'user') {
         throw new Error(
-          'BR-1: an assistant node may only be a child of a user node'
+          'an assistant node may only be a child of a user node'
         );
       }
 
@@ -352,7 +352,7 @@ export class Repo {
   }
 
   /**
-   * Fork from a LEAF assistant (BR-2 "Branch from node N") while keeping the
+   * Fork from a LEAF assistant ("Branch from node N") while keeping the
    * original answer as its own branch. The node tree can't represent "the
    * original ends here" once the node gains a child, so we snapshot the answer:
    * copy `leafAssistantId` to a sibling under the same user turn, then start the
@@ -418,14 +418,14 @@ export class Repo {
     return tx();
   }
 
-  /** DB-4: periodic persist of partial content (only while still streaming). */
+  /** Periodic persist of partial content (only while still streaming). */
   checkpointAssistant(nodeId: string, content: string): void {
     this.stmts.checkpointAssistant.run({ id: nodeId, content });
   }
 
   /**
-   * Mark an assistant node complete with final content and usage (DB-4),
-   * then advance the conversation's active leaf to this node (BR-2).
+   * Mark an assistant node complete with final content and usage,
+   * then advance the conversation's active leaf to this node.
    */
   completeAssistant(
     nodeId: string,
@@ -450,7 +450,7 @@ export class Repo {
         output_tokens: args.outputTokens,
         cost_usd: args.costUsd,
       });
-      // BR-2: the freshly generated assistant node becomes the active leaf.
+      // The freshly generated assistant node becomes the active leaf.
       this.stmts.setActiveLeaf.run({
         id: node.conversation_id,
         leaf: nodeId,
@@ -461,7 +461,7 @@ export class Repo {
   }
 
   /**
-   * Mark an assistant node failed (CL-9). Persists any partial content so the
+   * Mark an assistant node failed. Persists any partial content so the
    * user can see what arrived before the failure.
    */
   failAssistant(nodeId: string, errorText: string, partialContent = ''): void {
@@ -473,7 +473,7 @@ export class Repo {
     });
   }
 
-  /** BR-2 "Switch branch": set active leaf, no generation. */
+  /** "Switch branch": set active leaf, no generation. */
   setActiveLeaf(conversationId: string, leafId: string): void {
     this.stmts.setActiveLeaf.run({
       id: conversationId,
@@ -483,7 +483,7 @@ export class Repo {
   }
 
   /**
-   * BR-4: delete a node and its entire subtree (DB ON DELETE CASCADE on
+   * Delete a node and its entire subtree (DB ON DELETE CASCADE on
    * nodes.parent_id). conversations.active_leaf is auto-nulled by
    * ON DELETE SET NULL if it pointed into the removed subtree.
    */
@@ -495,7 +495,7 @@ export class Repo {
 
   /**
    * Attach a directory to a conversation, optionally scoped from a node
-   * downward (RC-3). node_id NULL = whole conversation.
+   * downward. node_id NULL = whole conversation.
    */
   addAttachment(args: {
     conversationId: string;

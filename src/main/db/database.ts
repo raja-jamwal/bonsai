@@ -1,24 +1,24 @@
 // Database open / migration / recovery.
-// better-sqlite3 is a synchronous native module (DB-1); default import.
+// better-sqlite3 is a synchronous native module; default import.
 import Database from 'better-sqlite3';
 import { SCHEMA_SQL, SCHEMA_VERSION } from './schema.js';
 
 /**
- * Open (or create) the SQLite database at `filePath`, apply pragmas (DB-2),
- * ensure the schema exists, run forward migrations (DB-6), and record the
+ * Open (or create) the SQLite database at `filePath`, apply pragmas,
+ * ensure the schema exists, run forward migrations, and record the
  * schema version in `meta`. Returns the live, synchronous DB handle.
  */
 export function openDatabase(filePath: string): Database.Database {
   const db = new Database(filePath);
 
-  // DB-2: pragmas at open. WAL for concurrent reads during streaming writes;
-  // foreign_keys ON so the cascade / set-null relations in DB-3 are enforced;
+  // Pragmas at open. WAL for concurrent reads during streaming writes;
+  // foreign_keys ON so the cascade / set-null relations are enforced;
   // synchronous NORMAL is WAL-safe and faster.
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
   db.pragma('synchronous = NORMAL');
 
-  // Create tables/indexes if absent (idempotent DDL). DB-6: migrations are
+  // Create tables/indexes if absent (idempotent DDL). Migrations are
   // applied transactionally via direct DDL.
   const migrate = db.transaction(() => {
     db.exec(SCHEMA_SQL);
@@ -30,7 +30,7 @@ export function openDatabase(filePath: string): Database.Database {
       db.exec(`ALTER TABLE nodes ADD COLUMN title TEXT`);
     }
 
-    // DB-6: read the recorded schema version, defaulting to the current
+    // Read the recorded schema version, defaulting to the current
     // version on a brand-new database (the schema we just exec'd is vN).
     const row = db
       .prepare("SELECT value FROM meta WHERE key = 'schema_version'")
@@ -60,7 +60,7 @@ export function openDatabase(filePath: string): Database.Database {
 }
 
 /**
- * NF-3: a crash mid-stream leaves at most one node per in-flight turn in
+ * A crash mid-stream leaves at most one node per in-flight turn in
  * `status = 'streaming'`. On startup, mark every such orphaned node as
  * `error` so the UI never shows a permanently "streaming" node. Returns the
  * number of rows recovered.

@@ -162,7 +162,7 @@ export const MODEL_OPTIONS: ModelOption[] = [
  * editUser case (a new user node is created).
  *
  * Streaming itself is delivered over a per-turn MessageChannelMain port that
- * lives inside the preload (isolated world) for sub-50ms latency (NF-2); the
+ * lives inside the preload (isolated world) for sub-50ms latency; the
  * renderer subscribes to plain StreamEvents via `onTurnEvent` rather than
  * receiving the raw MessagePort (which cannot cross contextBridge).
  */
@@ -229,7 +229,7 @@ export const IPC = {
 } as const;
 
 /**
- * Health/diagnostics surface for the resolved `claude` binary (CL-10).
+ * Health/diagnostics surface for the resolved `claude` binary.
  */
 export interface EngineStatus {
   claudePath: string | null;

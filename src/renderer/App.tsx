@@ -1,8 +1,8 @@
 // App.tsx — the two-column app shell (handoff "Layout": 280px sidebar + 1fr
 // conversation pane).
 //
-// On mount: loadConversations() (store action) and probe api.engineStatus()
-// (CL-10). If the engine is not ok, an actionable banner is surfaced above the
+// On mount: loadConversations() (store action) and probe api.engineStatus().
+// If the engine is not ok, an actionable banner is surfaced above the
 // shell rather than failing silently mid-turn.
 //
 // If there is no active conversation, the pane area shows an empty state with a
@@ -52,7 +52,7 @@ export function App() {
 
   return (
     <>
-      {/* Engine setup modal (CL-10): blocks until the claude binary is located. */}
+      {/* Engine setup modal: blocks until the claude binary is located. */}
       {engine && !engine.ok ? (
         <EngineSetupModal engine={engine} onResolved={setEngine} />
       ) : null}

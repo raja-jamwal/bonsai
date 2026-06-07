@@ -116,7 +116,7 @@ export function Composer() {
   return (
     <div className="composer">
       <div className="composer-inner">
-        {/* Attached folders (Claude's working dirs for this branch, RC-3). */}
+        {/* Attached folders (Claude's working dirs for this branch). */}
         {folders.length > 0 ? (
           <div className="folder-chips">
             {folders.map((f) => (

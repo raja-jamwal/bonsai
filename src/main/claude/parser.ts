@@ -1,9 +1,9 @@
 // Stream-JSON parser for the `claude` CLI's NDJSON stdout.
 //
-// Implements CL-5 (split on newlines, JSON-parse each line, dispatch on the
-// `type` discriminator; unknown types are ignored for forward-compatibility)
-// and CL-6 (key only on `type` plus a small explicit set of fields; never
-// assume field ordering or presence; never throw on malformed input).
+// Splits on newlines, JSON-parses each line, and dispatches on the `type`
+// discriminator; unknown types are ignored for forward-compatibility. Keys only
+// on `type` plus a small explicit set of fields; never assumes field ordering
+// or presence; never throws on malformed input.
 //
 // Verified against the captured fixture test/fixtures/stream_capture.ndjson
 // produced by CLI v2.1.168.
@@ -27,8 +27,8 @@ export type ParseEmit =
   | { kind: 'ignored'; raw: string };
 
 // ---------------------------------------------------------------------------
-// Narrow, defensive shape helpers. We never assume presence/ordering (CL-6),
-// so everything is read through guards rather than typed casts of the payload.
+// Narrow, defensive shape helpers. We never assume presence/ordering, so
+// everything is read through guards rather than typed casts of the payload.
 // ---------------------------------------------------------------------------
 
 /** True for plain (non-null, non-array) objects. */
@@ -49,7 +49,7 @@ function str(v: unknown): string | null {
 /**
  * Parse a single already-trimmed-of-newline line into zero or one ParseEmit.
  * Returns `ignored` for blank lines, JSON-parse failures, and any `type` we
- * do not explicitly handle (CL-5 forward-compatibility). Never throws.
+ * do not explicitly handle (forward-compatibility). Never throws.
  */
 function parseLine(line: string): ParseEmit | null {
   // Tolerate blank lines (e.g. trailing newline produces an empty segment).
@@ -59,7 +59,7 @@ function parseLine(line: string): ParseEmit | null {
   try {
     obj = JSON.parse(line);
   } catch {
-    // CL-6: malformed JSON must never throw — surface the raw line instead.
+    // Malformed JSON must never throw — surface the raw line instead.
     return { kind: 'ignored', raw: line };
   }
 
@@ -75,14 +75,14 @@ function parseLine(line: string): ParseEmit | null {
       return { kind: 'result', result: parseResult(obj) };
 
     case 'system': {
-      // Only the init subtype is interesting for diagnostics (CL-5: system/init).
+      // Only the init subtype is interesting for diagnostics.
       if (str(obj['subtype']) === 'init') return { kind: 'init', raw: obj };
       return { kind: 'ignored', raw: line };
     }
 
     // The cumulative "assistant" snapshot, rate-limit events, and anything else
     // are ignored — we accumulate content ONLY from text_delta to avoid double
-    // counting (CL-5).
+    // counting.
     default:
       return { kind: 'ignored', raw: line };
   }
@@ -149,7 +149,7 @@ function parseResult(obj: Record<string, unknown>): TurnResult {
 /**
  * Incremental NDJSON parser. `feed` buffers partial trailing lines across calls
  * (split on newline, keep the remainder); `end` flushes any remaining buffered
- * complete line. Neither ever throws (CL-6).
+ * complete line. Neither ever throws.
  */
 export class StreamParser {
   /** Carry-over for a line split across chunk boundaries. */

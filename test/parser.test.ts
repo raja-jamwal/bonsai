@@ -1,8 +1,8 @@
-// Tests for the NDJSON stream parser (CL-5, CL-6).
+// Tests for the NDJSON stream parser.
 // Drives the real captured fixture through StreamParser two ways — all at once
 // and split into arbitrary mid-line chunks — and asserts the parser is robust to
-// chunk boundaries (it must buffer partial lines, NF-2) and never throws on bad
-// JSON (CL-5: unknown/malformed lines are ignored, not fatal).
+// chunk boundaries (it must buffer partial lines) and never throws on bad
+// JSON (unknown/malformed lines are ignored, not fatal).
 
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -31,16 +31,16 @@ function splitMidline(s: string, size: number): string[] {
   return chunks;
 }
 
-/** Shared assertions over a parsed emit stream — CL-5/CL-6 expectations. */
+/** Shared assertions over a parsed emit stream. */
 function assertFixtureEmits(emits: ParseEmit[]): void {
-  // (CL-5) deltas concatenate to the assistant text 'PONG'.
+  // deltas concatenate to the assistant text 'PONG'.
   const deltaText = emits
     .filter((e): e is Extract<ParseEmit, { kind: 'delta' }> => e.kind === 'delta')
     .map((e) => e.text)
     .join('');
   expect(deltaText).toBe('PONG');
 
-  // (CL-5) exactly one terminal result event.
+  // exactly one terminal result event.
   const results = emits.filter(
     (e): e is Extract<ParseEmit, { kind: 'result' }> => e.kind === 'result',
   );
@@ -49,24 +49,24 @@ function assertFixtureEmits(emits: ParseEmit[]): void {
   const r = results[0].result;
   expect(r.content).toBe('PONG');
   expect(r.isError).toBe(false);
-  // (CL-5) usage/cost/duration read off the result event (input 10, output 47).
+  // usage/cost/duration read off the result event (input 10, output 47).
   expect(r.inputTokens).toBe(10);
   expect(r.outputTokens).toBe(47);
   expect(typeof r.costUsd).toBe('number');
   expect(r.costUsd as number).toBeGreaterThan(0);
   expect(typeof r.durationMs).toBe('number');
 
-  // (CL-5) at least one system/init event is surfaced for diagnostics.
+  // at least one system/init event is surfaced for diagnostics.
   const inits = emits.filter((e) => e.kind === 'init');
   expect(inits.length).toBeGreaterThanOrEqual(1);
 }
 
 describe('StreamParser', () => {
-  it('parses the captured fixture fed all at once (CL-5/CL-6)', () => {
+  it('parses the captured fixture fed all at once', () => {
     assertFixtureEmits(emitsForChunks([FIXTURE]));
   });
 
-  it('parses the same fixture split into arbitrary mid-line chunks (NF-2)', () => {
+  it('parses the same fixture split into arbitrary mid-line chunks', () => {
     // 7 bytes is intentionally tiny so almost every JSON line is split.
     assertFixtureEmits(emitsForChunks(splitMidline(FIXTURE, 7)));
   });
@@ -80,7 +80,7 @@ describe('StreamParser', () => {
     expect(split.filter((e) => e.kind === 'result')).toHaveLength(1);
   });
 
-  it('ignores malformed JSON without throwing (CL-5)', () => {
+  it('ignores malformed JSON without throwing', () => {
     const parser = new StreamParser();
     let emits: ParseEmit[] = [];
     expect(() => {

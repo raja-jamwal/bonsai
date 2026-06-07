@@ -1,4 +1,4 @@
-// EngineSetupModal — shown when the `claude` CLI can't be resolved (CL-10).
+// EngineSetupModal — shown when the `claude` CLI can't be resolved.
 // Lets the user locate the binary via the OS file picker or by pasting a path;
 // the choice is validated and persisted (SQLite meta) by the main process, so it
 // survives restarts and a stripped PATH (e.g. a packaged app launched from

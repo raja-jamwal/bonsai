@@ -1,10 +1,10 @@
-// Claude subprocess runner (CL-1..CL-3, CL-7..CL-9).
+// Claude subprocess runner.
 //
 // Each turn spawns a fresh `claude` subprocess in print mode, streams the branch
 // thread to its stdin as NDJSON, parses stream-json from stdout, and reports
 // deltas / completion / errors via callbacks. A single conversation may have
 // multiple concurrent in-flight turns on different branches; each writes only to
-// its own node (keyed by nodeId), so there is no cross-turn interference (CL-7).
+// its own node (keyed by nodeId), so there is no cross-turn interference.
 
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { StreamParser, type TurnResult } from './parser.js';
@@ -33,7 +33,7 @@ export interface RunCallbacks {
   onError(message: string): void;
 }
 
-// Persist accumulated partial content every N deltas for crash recovery (DB-4).
+// Persist accumulated partial content every N deltas for crash recovery.
 const CHECKPOINT_EVERY_DELTAS = 20;
 
 /**
@@ -62,12 +62,12 @@ export function buildPromptFromThread(thread: ThreadMessage[]): string {
   );
 }
 
-// Grace period between SIGTERM and SIGKILL on abort (CL-8).
+// Grace period between SIGTERM and SIGKILL on abort.
 const SIGKILL_TIMEOUT_MS = 3000;
 
 export class ClaudeRunner {
   private claudePath: string;
-  // Map of nodeId -> in-flight child process (CL-7).
+  // Map of nodeId -> in-flight child process.
   private readonly children = new Map<string, ChildProcessWithoutNullStreams>();
 
   constructor(claudePath: string) {
@@ -85,13 +85,13 @@ export class ClaudeRunner {
   }
 
   /**
-   * Spawn a fresh `claude` subprocess for one turn (CL-1..CL-3).
+   * Spawn a fresh `claude` subprocess for one turn.
    *
    * Each callback set is bound to exactly this nodeId; failures here never touch
    * another turn's node.
    */
   start(opts: RunOptions, cb: RunCallbacks): void {
-    // Canonical invocation (CL-2). The PRIMARY dir is the process cwd; only the
+    // Canonical invocation. The PRIMARY dir is the process cwd; only the
     // REMAINDER are passed via --add-dir (the IPC layer pre-splits cwd/addDirs).
     const model = opts.model && opts.model.length > 0 ? opts.model : 'sonnet';
     const args = [
@@ -132,7 +132,7 @@ export class ClaudeRunner {
     let doneSent = false; // did we already invoke onDone?
     let stderrBuf = '';
 
-    // Guard so a turn reports a failure at most once (CL-9).
+    // Guard so a turn reports a failure at most once.
     const fail = (message: string): void => {
       if (doneSent) return;
       doneSent = true;
@@ -146,7 +146,7 @@ export class ClaudeRunner {
           case 'delta': {
             accumulated += e.text;
             cb.onDelta(e.text);
-            // Periodic checkpoint of partial content for crash recovery (DB-4).
+            // Periodic checkpoint of partial content for crash recovery.
             if (++deltaCount >= CHECKPOINT_EVERY_DELTAS) {
               deltaCount = 0;
               cb.onCheckpoint(accumulated);
@@ -158,7 +158,7 @@ export class ClaudeRunner {
             if (doneSent) break;
             const r = e.result;
             if (r.isError) {
-              // Terminal result flagged an error (CL-9).
+              // Terminal result flagged an error.
               fail(r.errorText ?? 'Claude reported an error');
             } else {
               doneSent = true;
@@ -171,7 +171,7 @@ export class ClaudeRunner {
           }
           case 'init':
           case 'ignored':
-            // Diagnostics only — nothing to forward (CL-5).
+            // Diagnostics only — nothing to forward.
             break;
         }
       }
@@ -181,7 +181,7 @@ export class ClaudeRunner {
       handleEmits(parser.feed(d.toString('utf8')));
     });
 
-    // Capture stderr for diagnostics / error_text (CL-9).
+    // Capture stderr for diagnostics / error_text.
     child.stderr.on('data', (d: Buffer) => {
       stderrBuf += d.toString('utf8');
     });
@@ -199,7 +199,7 @@ export class ClaudeRunner {
 
       if (doneSent) return;
 
-      // No terminal result produced before exit -> failure (CL-9).
+      // No terminal result produced before exit -> failure.
       if (!resultEmitted) {
         const detail = stderrBuf.trim();
         fail(detail.length > 0 ? detail : `no result (claude exited with code ${code ?? 'unknown'})`);
@@ -207,7 +207,7 @@ export class ClaudeRunner {
       }
 
       // Result was seen but we somehow haven't reported done (defensive): if the
-      // exit code is non-zero, treat as failure (CL-9).
+      // exit code is non-zero, treat as failure.
       if (code !== 0 && code !== null) {
         const detail = stderrBuf.trim();
         fail(detail.length > 0 ? detail : `claude exited with code ${code}`);
@@ -215,7 +215,7 @@ export class ClaudeRunner {
     });
 
     // --- write the branch to stdin as a SINGLE user message, then close ------
-    // DEVIATION FROM SPEC CL-3 (forced by verified CLI 2.1.168 behavior):
+    // DEVIATION FROM SPEC (forced by verified CLI 2.1.168 behavior):
     // `--input-format stream-json` is a *streaming input* mode — it responds to
     // EVERY user message in the stream and IGNORES any assistant messages we
     // inject (it regenerates them). Feeding the native [user, assistant, user]
@@ -241,7 +241,7 @@ export class ClaudeRunner {
         /* swallow: handled via 'close'/'error' on the child */
       });
       child.stdin.write(payload);
-      child.stdin.end(); // close stdin to signal end of input (CL-3)
+      child.stdin.end(); // close stdin to signal end of input
     } catch (err) {
       fail(`Failed to write input to claude: ${(err as Error).message}`);
       this.abort(opts.nodeId);
@@ -249,7 +249,7 @@ export class ClaudeRunner {
   }
 
   /**
-   * Cancel an in-flight turn (CL-8): SIGTERM, then SIGKILL after a timeout if
+   * Cancel an in-flight turn: SIGTERM, then SIGKILL after a timeout if
    * the process is still alive. No-op if the nodeId has no active child.
    */
   abort(nodeId: string): void {

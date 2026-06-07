@@ -12,10 +12,10 @@
 //   • "siblings"      == children that share the same parent_id (siblingsOf()),
 //                        i.e. the alternatives at a fork.
 //   • "active branch" == activeLeafId; switching branch == api.switchBranch then
-//                        re-pointing activeLeafId (BR-2 "Switch branch").
+//                        re-pointing activeLeafId ("Switch branch").
 //
 // The store owns view state (some persisted to localStorage) plus the loaded
-// ConversationTree, and integrates streaming (§6 onTurnEvent) by appending
+// ConversationTree, and integrates streaming (onTurnEvent) by appending
 // deltas into the in-memory node's content and re-rendering.
 // -----------------------------------------------------------------------------
 import { useSyncExternalStore } from 'react';
@@ -177,7 +177,7 @@ function childrenOfRaw(nodes: MessageNode[], parentId: string | null): MessageNo
 
 // ---------------------------------------------------------------------------
 // Streaming integration: append deltas into the in-memory node, re-render, and
-// finalize on done/error. Implements §6 onTurnEvent consumption (NF-2 latency
+// finalize on done/error. Implements onTurnEvent consumption (latency
 // is handled in preload; here we just merge deltas into the tree).
 // ---------------------------------------------------------------------------
 function patchNode(nodeId: string, mutate: (n: MessageNode) => MessageNode): void {
@@ -332,7 +332,7 @@ async function openConversation(id: string): Promise<void> {
   void backfillBranchTitles();
 }
 
-/** Switch the active branch (BR-2 "Switch branch"): persist then re-point. */
+/** Switch the active branch ("Switch branch"): persist then re-point. */
 async function switchLeaf(leafId: string): Promise<void> {
   if (!state.activeConversationId) return;
   await api.switchBranch({ conversationId: state.activeConversationId, leafId });
@@ -358,7 +358,7 @@ function setOpenDropdown(id: string | null): void {
 }
 
 /**
- * Append a new turn under the active leaf (BR-2 "Append turn"). The main process
+ * Append a new turn under the active leaf ("Append turn"). The main process
  * inserts the user node and a streaming assistant node; we subscribe to the
  * assistant stream, then advance the active leaf to it.
  */
@@ -389,7 +389,7 @@ async function sendTurn(content: string): Promise<string | null> {
 }
 
 /**
- * Regenerate an assistant turn (BR-2 "Regenerate"): a new assistant sibling
+ * Regenerate an assistant turn ("Regenerate"): a new assistant sibling
  * under the same user parent. The new assistant node becomes the active leaf.
  */
 async function regenerate(assistantNodeId: string): Promise<string | null> {
@@ -401,9 +401,9 @@ async function regenerate(assistantNodeId: string): Promise<string | null> {
 }
 
 /**
- * Edit a user turn (BR-2 "Edit user turn"): a new user sibling under the edited
+ * Edit a user turn ("Edit user turn"): a new user sibling under the edited
  * node's parent with revised content, then generate. The original subtree is
- * retained (BR-3). Active leaf advances to the freshly generated assistant node.
+ * retained. Active leaf advances to the freshly generated assistant node.
  */
 async function editUser(userNodeId: string, content: string): Promise<string | null> {
   const res = await api.editUser({ userNodeId, content, permissionMode: state.permissionMode });
@@ -414,7 +414,7 @@ async function editUser(userNodeId: string, content: string): Promise<string | n
 }
 
 /**
- * Fork from a node (design "Fork from here"; engine BR-2 "Branch from node N").
+ * Fork from a node (design "Fork from here"; engine "Branch from node N").
  *
  * Forking does NOT generate anything — it just repositions you to this point so
  * your NEXT message starts a new branch (a sibling of whatever currently follows
@@ -425,7 +425,7 @@ async function editUser(userNodeId: string, content: string): Promise<string | n
  *     (a sibling of the existing follow-up user turn, if any).
  *   • Fork from a USER message: set the active leaf to its PARENT (assistant, or
  *     null at the root), so the next message is a sibling user turn — i.e. you
- *     re-ask differently at this point (BR-1: a user node's parent must be an
+ *     re-ask differently at this point (a user node's parent must be an
  *     assistant or null).
  *
  * The composer auto-focuses on activeLeafId change, so it's ready to type into.
@@ -438,7 +438,7 @@ function forkFrom(nodeId: string): void {
   if (!node) return;
 
   // The new branch is a sibling user turn attached under `base`. The next send
-  // creates it (BR-1: a user turn's parent is an assistant or null). We choose
+  // creates it (a user turn's parent is an assistant or null). We choose
   // `base` so a REAL fork (≥2 children at that point) is always created:
   //
   //   • Assistant WITH a continuation (mid-conversation): base = that assistant,
@@ -500,7 +500,7 @@ function cancelFork(): void {
   setState({ fork: null, activeLeafId: restore });
 }
 
-/** Delete a node and its subtree (BR-4 cascade). Confirmation is the UI's job. */
+/** Delete a node and its subtree (cascade). Confirmation is the UI's job. */
 async function deleteNode(nodeId: string): Promise<void> {
   await api.deleteNode({ nodeId });
   await refreshTree();
@@ -532,7 +532,7 @@ async function setModel(model: string | null): Promise<void> {
 
 /**
  * Open the OS file picker, attach each chosen file's directory to the
- * conversation (so the model can actually read it, RC-3/NF-1), and return the
+ * conversation (so the model can actually read it), and return the
  * selected absolute paths for the composer to reference in the prompt.
  */
 async function attachFiles(): Promise<string[]> {
@@ -566,7 +566,7 @@ function setPermissionMode(mode: PermissionMode): void {
 /**
  * The node a folder should be scoped to (the working dir for Claude's spawn):
  *  - null  => save at the CONVERSATION level (linear / main line; applies to all
- *             turns) — RC-3 node_id NULL.
+ *             turns) — node_id NULL.
  *  - <id>  => save at the BRANCH level (the head of the current forked branch),
  *             so sibling branches can use different folders.
  */
@@ -585,7 +585,7 @@ function currentBranchHeadId(): string | null {
 }
 
 /**
- * Attach a folder (the directory Claude is spawned in, RC-3/RC-4) to the current
+ * Attach a folder (the directory Claude is spawned in) to the current
  * conversation or branch. Saved at the conversation level on the main line, or at
  * the branch head when on a forked branch.
  */
@@ -635,7 +635,7 @@ export function useStore() {
     activePath().filter((n) => childrenOfRaw(nodes, n.id).length > 1);
 
   // Folders effective on the current branch: conversation-level (node_id null)
-  // plus any attached to a node on the active path (RC-3 ancestor-or-self).
+  // plus any attached to a node on the active path (ancestor-or-self).
   const branchFolders = (): Attachment[] => {
     const atts = snap.tree?.attachments ?? [];
     return atts.filter((a) => a.node_id === null || onPathIds.has(a.node_id));

@@ -1,10 +1,10 @@
 // Preload bridge — the sole privileged surface the renderer can touch.
-// Honors AR-1 (contextIsolation + sandbox: true; renderer never reaches Node,
-// the CLI, the DB, or the filesystem directly) and §6 (the IPC contract).
+// Honors contextIsolation + sandbox: true (renderer never reaches Node,
+// the CLI, the DB, or the filesystem directly) and the IPC contract.
 //
 // Command calls round-trip via ipcRenderer.invoke. Token streaming for a turn
 // arrives over a per-turn MessagePort that is received and parked here in the
-// isolated world (NF-2): only plain StreamEvents — never the raw MessagePort,
+// isolated world: only plain StreamEvents — never the raw MessagePort,
 // which cannot cross contextBridge — are handed to the page via onTurnEvent.
 
 import { contextBridge, ipcRenderer } from 'electron';
@@ -33,15 +33,15 @@ import type {
 } from '@shared/types';
 
 // ---------------------------------------------------------------------------
-// Streaming subscriber registry (§6 streaming events; NF-2).
-// Keyed by assistantNodeId so multiple concurrent in-flight turns (CL-7) each
+// Streaming subscriber registry (streaming events).
+// Keyed by assistantNodeId so multiple concurrent in-flight turns each
 // fan out to their own subscribers without cross-talk.
 // ---------------------------------------------------------------------------
 const handlers = new Map<string, Set<TurnEventHandler>>();
 
 // The main process transfers one MessagePort per turn over 'turn:port'. We keep
 // the port in this isolated world and forward only deserialized StreamEvents to
-// the page (AR-1 / NF-2). The port is closed and the subscriber set is dropped
+// the page. The port is closed and the subscriber set is dropped
 // once the turn reaches a terminal event ('done' or 'error').
 ipcRenderer.on(
   'turn:port',
@@ -64,7 +64,7 @@ ipcRenderer.on(
 );
 
 // ---------------------------------------------------------------------------
-// The exposed API surface (fully typed against BridgeApi; §6 command table).
+// The exposed API surface (fully typed against BridgeApi; command table).
 // ---------------------------------------------------------------------------
 const api: BridgeApi = {
   // Commands (renderer -> main, awaitable) — each maps to one IPC channel.
@@ -117,7 +117,7 @@ const api: BridgeApi = {
   removeAttachment: (args: RemoveAttachmentArgs): Promise<void> =>
     ipcRenderer.invoke(IPC.attachmentRemove, args),
 
-  // IPC-1: the OS directory picker lives in main; the renderer never resolves
+  // The OS directory picker lives in main; the renderer never resolves
   // arbitrary paths itself — it just receives the granted path back.
   pickDirectory: (): Promise<string | null> =>
     ipcRenderer.invoke(IPC.pickDirectory),
@@ -130,7 +130,7 @@ const api: BridgeApi = {
   setClaudePath: (path: string): Promise<EngineStatus> =>
     ipcRenderer.invoke(IPC.engineSetClaudePath, path),
 
-  // CL-10 diagnostics surface for the resolved `claude` binary.
+  // Diagnostics surface for the resolved `claude` binary.
   engineStatus: (): Promise<EngineStatus> =>
     ipcRenderer.invoke(IPC.engineStatus),
 
@@ -152,5 +152,5 @@ const api: BridgeApi = {
   },
 };
 
-// AR-1: expose the typed bridge as `window.api`; nothing else crosses the seam.
+// Expose the typed bridge as `window.api`; nothing else crosses the seam.
 contextBridge.exposeInMainWorld('api', api);

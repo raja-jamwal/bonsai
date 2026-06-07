@@ -1,8 +1,8 @@
 // Main process entry point — app lifecycle and engine wiring.
 //
-// On ready: open the SQLite DB in userData (DB-1), recover orphaned streaming
-// nodes from a prior crash (NF-3), resolve the `claude` binary (CL-10), build the
-// Repo and ClaudeRunner, create the sandboxed window (AR-1), register the IPC
+// On ready: open the SQLite DB in userData, recover orphaned streaming
+// nodes from a prior crash, resolve the `claude` binary, build the
+// Repo and ClaudeRunner, create the sandboxed window, register the IPC
 // handlers, and load the renderer (electron-vite dev URL or built file).
 
 import { app, BrowserWindow } from 'electron';
@@ -29,8 +29,8 @@ app.setName('branching-claude');
 let win: BrowserWindow | null = null;
 
 /**
- * Create the main window with the locked-down web preferences mandated by AR-1 /
- * NF-1: context isolation on, Node integration off, sandbox on. The renderer can
+ * Create the main window with the locked-down web preferences:
+ * context isolation on, Node integration off, sandbox on. The renderer can
  * only reach privileged work through the preload bridge.
  */
 function createWindow(): void {
@@ -42,9 +42,9 @@ function createWindow(): void {
     webPreferences: {
       // Built preload sits next to the built main bundle: out/main -> out/preload.
       preload: join(__dirname, '../preload/index.cjs'),
-      contextIsolation: true, // AR-1
-      nodeIntegration: false, // AR-1
-      sandbox: true, // AR-1
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
     },
   });
 
@@ -65,16 +65,16 @@ function createWindow(): void {
 
 // All engine setup happens after the app is ready (privileged APIs available).
 void app.whenReady().then(async () => {
-  // DB-1: single SQLite file in the app's userData directory.
+  // Single SQLite file in the app's userData directory.
   const dbPath = join(app.getPath('userData'), 'branching-claude.db');
-  const db = openDatabase(dbPath); // pragmas (DB-2) + migrations (DB-6)
+  const db = openDatabase(dbPath); // pragmas + migrations
 
-  // NF-3: mark any nodes left mid-stream by a crash as errored before serving UI.
+  // Mark any nodes left mid-stream by a crash as errored before serving UI.
   recoverOrphans(db);
 
   const repo = new Repo(db);
 
-  // CL-10: resolve the claude binary up front. Prefer the path the user saved in
+  // Resolve the claude binary up front. Prefer the path the user saved in
   // SQLite (survives restarts and a stripped PATH in a packaged app), else fall
   // back to PATH detection. Status is surfaced to the renderer via engine:status;
   // if unresolved, the renderer offers a locate dialog (engine:setClaudePath).

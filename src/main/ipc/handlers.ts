@@ -2,12 +2,12 @@
 //
 // Registers one ipcMain.handle for every channel in the shared IPC const, wires
 // each to the appropriate Repo / ClaudeRunner / dialog operation, and drives the
-// per-turn streaming pipeline over a MessageChannelMain port (NF-2: token deltas
+// per-turn streaming pipeline over a MessageChannelMain port (token deltas
 // reach the renderer with sub-50ms added latency, avoiding per-token IPC
 // serialization through webContents.send).
 //
 // All privileged work (DB, subprocess, filesystem, dialog) lives here in the main
-// process; the renderer only invokes these channels (AR-1, NF-1).
+// process; the renderer only invokes these channels.
 
 import { ipcMain, dialog, MessageChannelMain, type BrowserWindow } from 'electron';
 import { IPC } from '@shared/types';
@@ -107,8 +107,8 @@ export function registerIpcHandlers(deps: IpcDeps): void {
 
   // -- Turns (generation) --------------------------------------------------
 
-  // turn:send (BR-2 append / branch). parentId may be null => this turn's user
-  // node is the conversation root (CL-1, SendTurnArgs).
+  // turn:send (append / branch). parentId may be null => this turn's user
+  // node is the conversation root.
   ipcMain.handle(
     IPC.turnSend,
     (_e, args: SendTurnArgs): TurnStarted => {
@@ -124,7 +124,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
       if (args.parentId === null && convo && !convo.title.trim()) {
         repo.renameConversation(args.conversationId, makeTitle(args.content));
       }
-      // Model precedence (CL-2): explicit per-turn override, else the
+      // Model precedence: explicit per-turn override, else the
       // conversation's saved default, else the runner's built-in default.
       const model = args.model ?? convo?.model ?? null;
       const assistant = repo.insertStreamingAssistant({
@@ -142,7 +142,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     }
   );
 
-  // turn:regenerate (BR-2 regenerate): new assistant sibling under the same user
+  // turn:regenerate: new assistant sibling under the same user
   // parent as an existing assistant node, generated against that parent's thread.
   ipcMain.handle(
     IPC.turnRegenerate,
@@ -155,14 +155,14 @@ export function registerIpcHandlers(deps: IpcDeps): void {
         throw new Error('Assistant node has no user parent to regenerate from');
       }
       const userParentId = oldAssistant.parent_id;
-      // Model: explicit override, else reuse the old assistant's model (CL-2).
+      // Model: explicit override, else reuse the old assistant's model.
       const model = args.model ?? oldAssistant.model ?? null;
       const assistant = repo.insertStreamingAssistant({
         conversationId: oldAssistant.conversation_id,
         parentId: userParentId,
         model,
       });
-      // The thread (RC-2) is reconstructed from the USER parent, which already
+      // The thread is reconstructed from the USER parent, which already
       // ends on the new user turn (no new user node for regenerate).
       startTurn(deps, {
         userNodeId: userParentId,
@@ -174,10 +174,10 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     }
   );
 
-  // turn:forkLeaf (BR-2 branch from a leaf): snapshot the leaf answer into a
+  // turn:forkLeaf (branch from a leaf): snapshot the leaf answer into a
   // sibling and start a new branch under it, so the original answer remains its
   // own branch and the new branch shares the full prior history (fork at the
-  // question). The original subtree is retained (BR-3).
+  // question). The original subtree is retained.
   ipcMain.handle(
     IPC.turnForkLeaf,
     (_e, args: ForkLeafArgs): TurnStarted => {
@@ -206,8 +206,8 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     }
   );
 
-  // turn:editUser (BR-2 edit user turn): new user sibling under the edited node's
-  // parent with revised content; the original subtree is retained (BR-3).
+  // turn:editUser (edit user turn): new user sibling under the edited node's
+  // parent with revised content; the original subtree is retained.
   ipcMain.handle(
     IPC.turnEditUser,
     (_e, args: EditUserArgs): TurnStarted => {
@@ -237,14 +237,14 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     }
   );
 
-  // turn:abort (CL-8): kill the child, persist whatever partial content the node
+  // turn:abort: kill the child, persist whatever partial content the node
   // currently holds. Default policy keeps the partial and marks it complete.
   ipcMain.handle(IPC.turnAbort, (_e, args: AbortArgs): void => {
     runner.abort(args.nodeId);
     const node = repo.getNode(args.nodeId);
     if (node && node.status === 'streaming') {
-      // Default abort policy (CL-8): keep partial, mark complete. The checkpoint
-      // mechanism (DB-4) has persisted recent deltas into node.content already.
+      // Default abort policy: keep partial, mark complete. The checkpoint
+      // mechanism has persisted recent deltas into node.content already.
       repo.completeAssistant(args.nodeId, {
         content: node.content,
         inputTokens: node.input_tokens,
@@ -256,12 +256,12 @@ export function registerIpcHandlers(deps: IpcDeps): void {
 
   // -- Branching / structure ----------------------------------------------
 
-  // branch:switch (BR-2 switch branch): reassign active leaf, no generation.
+  // branch:switch (switch branch): reassign active leaf, no generation.
   ipcMain.handle(IPC.branchSwitch, (_e, args: SwitchBranchArgs): void =>
     repo.setActiveLeaf(args.conversationId, args.leafId)
   );
 
-  // node:delete (BR-4): cascade-delete a node and its subtree.
+  // node:delete: cascade-delete a node and its subtree.
   ipcMain.handle(IPC.nodeDelete, (_e, args: DeleteNodeArgs): void =>
     repo.deleteNode(args.nodeId)
   );
@@ -284,7 +284,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
 
   // -- Dialog / diagnostics ------------------------------------------------
 
-  // dialog:pickDirectory (IPC-1): the renderer never resolves paths itself; the
+  // dialog:pickDirectory: the renderer never resolves paths itself; the
   // OS picker runs in main and returns the chosen directory (or null).
   ipcMain.handle(IPC.pickDirectory, async (): Promise<string | null> => {
     const win = getWindow();
@@ -297,7 +297,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
 
   // dialog:pickFiles — OS file picker; returns the chosen absolute file paths so
   // the renderer can reference them in a prompt (the caller also attaches each
-  // file's directory so the model can actually read it, NF-1).
+  // file's directory so the model can actually read it).
   ipcMain.handle(IPC.pickFiles, async (): Promise<string[]> => {
     const win = getWindow();
     const opts: Electron.OpenDialogOptions = {
@@ -326,7 +326,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     return result.filePaths[0];
   });
 
-  // engine:status (CL-10): surface the resolved binary health to the renderer.
+  // engine:status: surface the resolved binary health to the renderer.
   ipcMain.handle(IPC.engineStatus, (): EngineStatus => engineStatus());
 
   // engine:setClaudePath — validate a user-chosen binary; on success persist it
@@ -370,14 +370,14 @@ interface TurnSpec {
 }
 
 /**
- * Start one generation turn (NF-2 streaming pipeline).
+ * Start one generation turn (streaming pipeline).
  *
- * 1. Assemble the root->leaf thread (RC-2) ending on the new user turn.
- * 2. Compute the effective directory set (RC-3), validate each (RC-4); the first
- *    valid dir is the process cwd, the rest are --add-dir (NF-1: only granted,
+ * 1. Assemble the root->leaf thread ending on the new user turn.
+ * 2. Compute the effective directory set, validate each; the first
+ *    valid dir is the process cwd, the rest are --add-dir (only granted,
  *    existing dirs are passed to the subprocess).
  * 3. Open a per-turn MessageChannelMain; the runner's callbacks persist to SQLite
- *    (DB-4) AND post StreamEvents down port1; port2 is handed to the renderer.
+ *    AND post StreamEvents down port1; port2 is handed to the renderer.
  *
  * The port is sent to the renderer BEFORE this function returns so the renderer
  * can attach its listener as soon as the awaitable command resolves.
@@ -386,20 +386,20 @@ function startTurn(deps: IpcDeps, spec: TurnSpec): void {
   const { repo, runner, getWindow } = deps;
   const assistantId = spec.assistantNodeId;
 
-  // RC-2: full root->leaf thread, already including the new user turn last.
+  // Full root->leaf thread, already including the new user turn last.
   const thread = repo.getThread(spec.userNodeId);
 
-  // RC-3 / RC-4: effective dirs on this branch path, validated to exist.
+  // Effective dirs on this branch path, validated to exist.
   const effective = repo.effectiveDirs(spec.userNodeId);
   const validDirs: string[] = [];
   for (const dir of effective) {
-    if (validateDir(dir).ok) validDirs.push(dir); // NF-1: skip nonexistent/invalid
+    if (validateDir(dir).ok) validDirs.push(dir); // skip nonexistent/invalid
   }
   // First valid dir is cwd; remainder are --add-dir. None => neutral temp dir.
   const cwd = validDirs.length > 0 ? validDirs[0] : neutralTempDir();
   const addDirs = validDirs.length > 0 ? validDirs.slice(1) : [];
 
-  // Per-turn streaming channel (NF-2): port1 stays in main, port2 goes to the
+  // Per-turn streaming channel: port1 stays in main, port2 goes to the
   // renderer via the preload, which re-exposes events through onTurnEvent.
   const { port1, port2 } = new MessageChannelMain();
 
@@ -423,17 +423,17 @@ function startTurn(deps: IpcDeps, spec: TurnSpec): void {
       skipPermissions: spec.skipPermissions ?? false,
     },
     {
-      // Incremental token text (CL-5) -> renderer (NF-2).
+      // Incremental token text -> renderer.
       onDelta: (text: string): void => {
         post({ type: 'delta', textDelta: text });
       },
-      // Periodic crash-recovery checkpoint of partial content (DB-4). Not sent
+      // Periodic crash-recovery checkpoint of partial content. Not sent
       // to the renderer — the renderer already has the deltas.
       onCheckpoint: (content: string): void => {
         repo.checkpointAssistant(assistantId, content);
       },
-      // Terminal success (CL-5 result): persist final content + usage (DB-4),
-      // advance the active leaf (BR-2), then notify and close the port.
+      // Terminal success: persist final content + usage,
+      // advance the active leaf, then notify and close the port.
       onDone: (r: TurnResult): void => {
         repo.completeAssistant(assistantId, {
           content: r.content,
@@ -453,7 +453,7 @@ function startTurn(deps: IpcDeps, spec: TurnSpec): void {
         });
         port1.close();
       },
-      // Failure (CL-9): mark the node error with diagnostics, notify, close.
+      // Failure: mark the node error with diagnostics, notify, close.
       onError: (message: string): void => {
         repo.failAssistant(assistantId, message);
         post({ type: 'error', message });

@@ -1,29 +1,29 @@
 // Persistence schema.
-// This module is pure data: the canonical DDL (DB-3) and the current schema
-// version (DB-6). database.ts is responsible for applying it.
+// This module is pure data: the canonical DDL and the current schema
+// version. database.ts is responsible for applying it.
 
 /**
  * Current schema version. Stored in the `meta` table under key
- * 'schema_version' (DB-6). Bump this and add a migration branch in
+ * 'schema_version'. Bump this and add a migration branch in
  * database.ts when the DDL changes.
  */
 export const SCHEMA_VERSION = 2;
 
 /**
- * Full DDL for the persistence layer (DB-3).
+ * Full DDL for the persistence layer.
  *
  * Notes on the constraints that must be preserved exactly:
  * - `conversations.active_leaf` -> `nodes(id) ON DELETE SET NULL` so deleting
  *   the active leaf node simply clears the pointer rather than orphaning the row.
  * - `nodes.conversation_id` -> `conversations(id) ON DELETE CASCADE`.
  * - `nodes.parent_id` -> `nodes(id) ON DELETE CASCADE` implements the subtree
- *   cascade delete (BR-4); NULL parent denotes the root.
+ *   cascade delete; NULL parent denotes the root.
  * - `nodes.role` / `nodes.status` CHECK constraints mirror the shared types.
  * - `attachments.node_id` -> `nodes(id) ON DELETE CASCADE`; NULL means the
- *   attachment applies to the whole conversation (RC-3).
+ *   attachment applies to the whole conversation.
  *
  * All tables use CREATE TABLE IF NOT EXISTS so the DDL is idempotent and safe
- * to exec on every open. DB-5: there is deliberately no `session_id` column.
+ * to exec on every open. There is deliberately no `session_id` column.
  */
 export const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS conversations (

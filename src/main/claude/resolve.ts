@@ -1,4 +1,4 @@
-// Claude binary resolution (CL-10).
+// Claude binary resolution.
 //
 // At startup the engine must locate the `claude` executable on PATH and read
 // its version. Absence or a probe failure surfaces a clear, actionable error to
@@ -35,7 +35,7 @@ export async function validateClaudePath(claudePath: string): Promise<EngineStat
 }
 
 /**
- * Resolve the `claude` CLI: find its path and version (CL-10).
+ * Resolve the `claude` CLI: find its path and version.
  *
  * Strategy:
  *  0. If a `preferredPath` is given (the path saved in SQLite) and it still
@@ -64,7 +64,7 @@ export async function resolveClaude(preferredPath?: string | null): Promise<Engi
       claudePath: null,
       claudeVersion: null,
       ok: false,
-      // Actionable error (CL-10): tell the user how to fix it.
+      // Actionable error: tell the user how to fix it.
       error:
         "Could not find the 'claude' CLI on your PATH. Install it with " +
         "'npm install -g @anthropic-ai/claude-code', or locate the binary " +

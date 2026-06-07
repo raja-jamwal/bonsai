@@ -7,7 +7,7 @@
 //   • Assistant: coral sparkle avatar (inline 4-point star SVG, matching the
 //     handoff mock) + body in Source Serif 4 15.5px/1.62.
 //
-// Rich rendering (NF-1 Security): message bodies render through <Markdown>
+// Rich rendering (Security): message bodies render through <Markdown>
 // (react-markdown + KaTeX + syntax highlighting). react-markdown does not emit
 // raw HTML from model text, so nothing is injected; math/code markup is built by
 // the trusted rehype plugins. No dangerouslySetInnerHTML of model output.
@@ -145,7 +145,7 @@ export function MessageStream() {
         ) : null}
 
         <div className="bubble-wrap" style={{ minWidth: 0 }}>
-          {/* Rich body: markdown + KaTeX math + highlighted code (NF-1: no raw
+          {/* Rich body: markdown + KaTeX math + highlighted code (no raw
               HTML from model text — see Markdown.tsx). */}
           <div className="bubble">
             <Markdown text={node.content} />
@@ -167,7 +167,7 @@ export function MessageStream() {
             </button>
             {/* Assistant-only thumbs-up (mock). Local toggle — interactive,
                 highlights coral when set. "Fork from here" on an assistant reply
-                already performs a regenerate (BR-2), so no action is lost. */}
+                already performs a regenerate, so no action is lost. */}
             {!isUser ? (
               <button
                 type="button"

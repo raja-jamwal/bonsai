@@ -1,14 +1,14 @@
 // Path validation and a neutral working directory for the engine.
-// Implements RC-4 (validate every path exists and is a directory before
-// spawning) and supports NF-1 (no model-supplied path is dereferenced outside
-// the granted set — callers validate dirs through validateDir here).
+// Validates every path exists and is a directory before spawning, and ensures
+// no model-supplied path is dereferenced outside the granted set — callers
+// validate dirs through validateDir here.
 
 import { statSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 /**
- * RC-4: validate that a path exists and is a directory.
+ * Validate that a path exists and is a directory.
  * Returns ok:false with a human-readable error on ENOENT or not-a-directory
  * (or any other stat failure), never throws.
  */
@@ -31,7 +31,7 @@ export function validateDir(p: string): { ok: boolean; error?: string } {
 
 /**
  * Stable per-app temp directory used as the process cwd when a branch has no
- * attached dirs (RC-4: the first effective dir is the cwd; with none, we fall
+ * attached dirs (the first effective dir is the cwd; with none, we fall
  * back to this neutral location rather than the app's own working directory).
  * Created on demand if missing.
  */

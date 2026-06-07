@@ -2,7 +2,7 @@
 // "Fork from here", regenerate, and edit-user. These lock in the invariants the
 // UI relies on: forks are always descendants of one shared root (never a second
 // root), the original branch is preserved, and every branch reconstructs the
-// full shared prefix + its own messages (RC-2 / BR-2 / BR-3).
+// full shared prefix + its own messages.
 import { describe, it, expect, beforeEach } from 'vitest';
 import { openDatabase } from '../src/main/db/database';
 import { Repo } from '../src/main/db/repo';
@@ -64,7 +64,7 @@ describe('Branching — fork from a leaf answer (forkLeafAssistant)', () => {
     expect(qKids).toHaveLength(2);
     expect(qKids.map((n) => n.role)).toEqual(['assistant', 'assistant']);
 
-    // Original answer is untouched and remains a leaf (its own branch, BR-3).
+    // Original answer is untouched and remains a leaf (its own branch).
     expect(childrenOf(cid, a1)).toHaveLength(0);
 
     // The snapshot carries the original answer's content and heads the new branch.
@@ -134,7 +134,7 @@ describe('Branching — regenerate (sibling answer to the same question)', () =>
     const a1b = answer(cid, u1, 'a1-regenerated');
 
     expect(childrenOf(cid, u1).map((n) => n.role)).toEqual(['assistant', 'assistant']);
-    expect(repo.getNode(a1)!.content).toBe('a1'); // original immutable (BR-3)
+    expect(repo.getNode(a1)!.content).toBe('a1'); // original immutable
     expect(repo.getThread(a1b)).toEqual([
       { role: 'user', content: 'q1' },
       { role: 'assistant', content: 'a1-regenerated' },
@@ -167,7 +167,7 @@ describe('Branching — edit a user turn (sibling question, original subtree kep
 });
 
 describe('Branching — invariants', () => {
-  it('BR-1: alternation is enforced (no user under user, no assistant under assistant)', () => {
+  it('alternation is enforced (no user under user, no assistant under assistant)', () => {
     const cid = repo.createConversation({});
     const u1 = repo.insertUserNode({ conversationId: cid, parentId: null, content: 'q1' });
     expect(() =>
@@ -175,7 +175,7 @@ describe('Branching — invariants', () => {
     ).toThrow();
   });
 
-  it('BR-4: deleting one branch cascades only that subtree; siblings + prefix survive', () => {
+  it('deleting one branch cascades only that subtree; siblings + prefix survive', () => {
     const cid = repo.createConversation({});
     const a1 = linear(cid, [['q', 'a']]).assistants[0];
     const u1 = repo.getNode(a1)!.parent_id!;
@@ -193,7 +193,7 @@ describe('Branching — invariants', () => {
     expect(roots(cid)).toHaveLength(1);
   });
 
-  it('switching the active leaf does not mutate the tree (BR-3)', () => {
+  it('switching the active leaf does not mutate the tree', () => {
     const cid = repo.createConversation({});
     const a1 = linear(cid, [['q', 'a']]).assistants[0];
     repo.forkLeafAssistant({ leafAssistantId: a1, content: 'other', model: null });
