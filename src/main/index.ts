@@ -22,7 +22,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // how the app is launched. Without this, an unpackaged launch can resolve to the
 // default "Electron" name and write to a *different* userData dir than
 // `npm run dev`, silently splitting the database across two files.
-app.setName('branching-claude');
+app.setName('Bonsai');
 
 // The single application window. Kept module-scoped so getWindow() can hand it to
 // the IPC layer for per-turn streaming ports.
@@ -66,7 +66,7 @@ function createWindow(): void {
 // All engine setup happens after the app is ready (privileged APIs available).
 void app.whenReady().then(async () => {
   // Single SQLite file in the app's userData directory.
-  const dbPath = join(app.getPath('userData'), 'branching-claude.db');
+  const dbPath = join(app.getPath('userData'), 'bonsai.db');
   const db = openDatabase(dbPath); // pragmas + migrations
 
   // Mark any nodes left mid-stream by a crash as errored before serving UI.
