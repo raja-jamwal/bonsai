@@ -5,8 +5,22 @@
 // the renderer (via EngineStatus) rather than failing silently mid-turn.
 
 import { spawn } from 'node:child_process';
+import { access, constants } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { platform } from 'node:process';
 import type { EngineStatus } from '@shared/types';
+
+// Well-known install locations to probe when shell discovery fails.
+const KNOWN_PATHS =
+  platform === 'win32'
+    ? []
+    : [
+        join(homedir(), '.local/bin/claude'),
+        join(homedir(), '.claude/local/claude'),
+        '/opt/homebrew/bin/claude',
+        '/usr/local/bin/claude',
+      ];
 
 /**
  * Validate a specific `claude` path by probing `<path> --version`. Used for a
@@ -15,23 +29,24 @@ import type { EngineStatus } from '@shared/types';
  * error. Never throws.
  */
 export async function validateClaudePath(claudePath: string): Promise<EngineStatus> {
-  const probe = await runCapture(claudePath, ['--version']);
-  if (probe.error || probe.code !== 0) {
+  // Check that the file exists and is executable. We can't rely on `--version`
+  // because the claude CLI requires a TTY and gets SIGKILL'd when spawned
+  // headlessly (i.e. from an Electron app launched via Finder / DMG).
+  try {
+    await access(claudePath, constants.X_OK);
+  } catch {
     return {
       claudePath,
       claudeVersion: null,
       ok: false,
-      error:
-        `'${claudePath}' is not a runnable claude CLI` +
-        (probe.stderr.trim() ? `: ${probe.stderr.trim()}` : '.'),
+      error: `'${claudePath}' is not a runnable claude CLI.`,
     };
   }
-  return {
-    claudePath,
-    claudeVersion: probe.stdout.trim() || probe.stderr.trim() || null,
-    ok: true,
-    error: null,
-  };
+  // Best-effort version probe — ignore failure (no TTY → SIGKILL).
+  const probe = await runCapture(claudePath, ['--version']);
+  const claudeVersion =
+    probe.code === 0 ? probe.stdout.trim() || probe.stderr.trim() || null : null;
+  return { claudePath, claudeVersion, ok: true, error: null };
 }
 
 /**
@@ -55,48 +70,70 @@ export async function resolveClaude(preferredPath?: string | null): Promise<Engi
     // else fall through — the stored path may be stale; try PATH next.
   }
 
-  // Step 1: locate the binary on PATH. `where` on Windows, `which` elsewhere.
-  const locator = platform === 'win32' ? 'where' : 'which';
-  const located = await runCapture(locator, ['claude']);
+  // Step 1: locate the binary. Electron apps launched from Finder/DMG inherit a
+  // stripped PATH that omits user-level dirs like ~/.local/bin. We run `which`
+  // through a login shell so it picks up the full user PATH from shell profiles.
+  const claudePath = await findOnPath();
 
-  if (located.error || located.code !== 0) {
+  if (!claudePath) {
     return {
       claudePath: null,
       claudeVersion: null,
       ok: false,
-      // Actionable error: tell the user how to fix it.
       error:
-        "Could not find the 'claude' CLI on your PATH. Install it with " +
+        "Could not find the 'claude' CLI. Install it with " +
         "'npm install -g @anthropic-ai/claude-code', or locate the binary " +
         'manually below.',
     };
   }
 
-  // `where` may return several lines on Windows; take the first non-empty one.
-  const claudePath = located.stdout
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .find((l) => l.length > 0) ?? 'claude';
+  // Step 2: validate (executable check) and best-effort version probe.
+  return validateClaudePath(claudePath);
+}
 
-  // Step 2: probe the version to confirm the binary is actually runnable.
-  const versionProbe = await runCapture(claudePath, ['--version']);
-
-  if (versionProbe.error || versionProbe.code !== 0) {
-    return {
-      claudePath,
-      claudeVersion: null,
-      ok: false,
-      error:
-        `Found 'claude' at ${claudePath} but '--version' failed` +
-        (versionProbe.stderr.trim() ? `: ${versionProbe.stderr.trim()}` : '.') +
-        ' The binary may be corrupt or incompatible.',
-    };
+/**
+ * Locate the `claude` binary. Tries (in order):
+ *  1. Login-shell `which` via zsh/bash — picks up user PATH from shell profiles.
+ *  2. Bare `which`/`where` — works when Electron inherits a full PATH.
+ *  3. Well-known install paths probed directly via fs.access.
+ * Returns the path string, or null if not found.
+ */
+async function findOnPath(): Promise<string | null> {
+  if (platform === 'win32') {
+    const r = await runCapture('where', ['claude']);
+    if (!r.error && r.code === 0) {
+      return r.stdout.split(/\r?\n/).map((l) => l.trim()).find((l) => l.length > 0) ?? null;
+    }
+    return null;
   }
 
-  // Version output is typically a single short line, e.g. "1.2.3 (Claude Code)".
-  const claudeVersion = versionProbe.stdout.trim() || versionProbe.stderr.trim() || null;
+  // Try login shells first so ~/.local/bin and similar dirs are on PATH.
+  for (const shell of ['zsh', 'bash']) {
+    const r = await runCapture(shell, ['-lc', 'which claude']);
+    if (!r.error && r.code === 0) {
+      const p = r.stdout.split(/\r?\n/).map((l) => l.trim()).find((l) => l.length > 0);
+      if (p) return p;
+    }
+  }
 
-  return { claudePath, claudeVersion, ok: true, error: null };
+  // Bare `which` as a fallback (works when Electron inherits a full PATH).
+  const bare = await runCapture('which', ['claude']);
+  if (!bare.error && bare.code === 0) {
+    const p = bare.stdout.split(/\r?\n/).map((l) => l.trim()).find((l) => l.length > 0);
+    if (p) return p;
+  }
+
+  // Last resort: probe known install locations directly.
+  for (const p of KNOWN_PATHS) {
+    try {
+      await access(p, constants.X_OK);
+      return p;
+    } catch {
+      // not there — try next
+    }
+  }
+
+  return null;
 }
 
 /** Internal: spawn a command, capture stdout/stderr/exit, never throw. */
