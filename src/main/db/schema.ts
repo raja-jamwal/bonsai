@@ -1,4 +1,4 @@
-// Persistence schema (TECHNICAL_REQUIREMENTS §5).
+// Persistence schema.
 // This module is pure data: the canonical DDL (DB-3) and the current schema
 // version (DB-6). database.ts is responsible for applying it.
 

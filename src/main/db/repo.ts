@@ -1,5 +1,5 @@
 // Repository: all conversation/node/attachment persistence operations
-// (TECHNICAL_REQUIREMENTS §3 reconstruction, §4 branching, §5 persistence).
+// (thread reconstruction, branching, persistence).
 // Wraps a single better-sqlite3 handle and exposes the typed operations the
 // IPC layer and runner compose against.
 import type Database from 'better-sqlite3';

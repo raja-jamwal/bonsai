@@ -1,4 +1,4 @@
-// IPC handlers — the UI seam (TECHNICAL_REQUIREMENTS §6 IPC Contract).
+// IPC handlers — the UI seam (the IPC contract).
 //
 // Registers one ipcMain.handle for every channel in the shared IPC const, wires
 // each to the appropriate Repo / ClaudeRunner / dialog operation, and drives the

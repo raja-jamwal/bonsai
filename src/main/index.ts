@@ -1,5 +1,4 @@
-// Main process entry point — app lifecycle and engine wiring
-// (TECHNICAL_REQUIREMENTS §1 AR-1, §5 persistence, §7 NF-1/NF-3).
+// Main process entry point — app lifecycle and engine wiring.
 //
 // On ready: open the SQLite DB in userData (DB-1), recover orphaned streaming
 // nodes from a prior crash (NF-3), resolve the `claude` binary (CL-10), build the

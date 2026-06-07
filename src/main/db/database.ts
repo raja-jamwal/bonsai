@@ -1,4 +1,4 @@
-// Database open / migration / recovery (TECHNICAL_REQUIREMENTS §5).
+// Database open / migration / recovery.
 // better-sqlite3 is a synchronous native module (DB-1); default import.
 import Database from 'better-sqlite3';
 import { SCHEMA_SQL, SCHEMA_VERSION } from './schema.js';

@@ -1,6 +1,6 @@
 // Shared types — the IPC seam between main and renderer.
-// This file is the single source of truth for the contract described in
-// TECHNICAL_REQUIREMENTS.md §6. Both processes import from here.
+// This file is the single source of truth for the IPC contract.
+// Both processes import from here.
 
 export type Role = 'user' | 'assistant';
 export type NodeStatus = 'streaming' | 'complete' | 'error';

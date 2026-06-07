@@ -2,8 +2,8 @@
 // Renderer state store — dependency-free, built on React's useSyncExternalStore.
 //
 // VOCABULARY MAPPING (design handoff "branch" model  ->  engine node-tree model)
-// The design talks about "branches"; the engine (TECHNICAL_REQUIREMENTS §3/§4)
-// models everything as a tree of MessageNodes with parent_id links. The map is:
+// The design talks about "branches"; the engine models everything as a tree
+// of MessageNodes with parent_id links. The map is:
 //   • a "branch"      == a leaf node (the end of a root->leaf path).
 //   • the "path"      == the root->leaf node chain (activePath()), used for the
 //                        breadcrumb strip and to mark tree rows on-path.
