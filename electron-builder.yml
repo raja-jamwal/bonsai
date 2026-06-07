@@ -16,12 +16,15 @@ files:
 asarUnpack:
   - "**/node_modules/better-sqlite3/**"
 
+# No Apple Developer ID — we ad-hoc sign in afterPack instead (electron-builder's
+# own signing stays disabled via identity:null). Ad-hoc signing is required on
+# Apple Silicon so the (repacked) bundle isn't rejected as "damaged".
+afterPack: scripts/afterPack.cjs
+
 mac:
   category: public.app-category.developer-tools
   target:
     - target: dmg
-  # Local/unsigned build: skip code signing (no Developer ID). The app will
-  # need a right-click → Open the first time (Gatekeeper).
   identity: null
 
 dmg:
