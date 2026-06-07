@@ -1,0 +1,1140 @@
+/*
+ * app.css — layout + component styling for the Branched Conversation pane.
+ * Recreates the visual spec from the design handoff "Branching Conversations v2"
+ * (warm cream canvas, coral accents). Plain CSS classes only (no CSS-in-JS).
+ *
+ * All values reference token vars defined in tokens.css. Components authored by
+ * other agents consume these class names.
+ *
+ * Class-name map by handoff component:
+ *   .app-shell / .sidebar / .pane                  -> two-column shell + grid
+ *   .recent-row / .branch-tree / .tree-row / .stub -> sidebar tree
+ *   .pane-head / .crumbs / .crumb / .crumb-menu     -> header + breadcrumb
+ *   .branch-banner                                  -> branch banner
+ *   .stream / .msg / .bubble / .avatar              -> message stream
+ *   .fork-marker                                    -> inline fork-point marker
+ *   .msg-actions / .fork-btn                        -> hover actions
+ *   .composer                                       -> composer
+ */
+
+/* ============================================================ *
+ * 1. App shell — two-column: 280px sidebar + 1fr pane
+ * ============================================================ */
+.app-shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ---- Left sidebar ----------------------------------------- */
+.sidebar {
+  background: var(--bg); /* mock .left — white, not the cream rail */
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 4px 8px 8px;
+}
+
+.sidebar-section-label {
+  font-size: var(--fs-eyebrow);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  padding: 12px 10px 6px;
+}
+
+/* Recents list row (one per top-level conversation). */
+.recent-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--r-tree);
+  font-size: var(--fs-ui);
+  color: var(--fg);
+  text-align: left;
+  transition: background var(--t-fast) ease;
+}
+.recent-row:hover {
+  background: var(--hover);
+}
+.recent-row .recent-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border);
+  flex: 0 0 6px;
+}
+.recent-row.active .recent-dot {
+  background: var(--brand);
+}
+.recent-row .recent-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+/* Active conversation: tinted bg + coral text (handoff component 1). */
+.recent-row.active {
+  background: var(--brand-tint);
+  color: var(--fork-ink);
+  font-weight: 500;
+}
+
+/* Fork count badge — white pill, coral border (e.g. "🌿 7"). */
+.fork-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: #fff;
+  border: 1px solid var(--brand-tint-2);
+  color: var(--fork-ink);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: var(--r-pill);
+  line-height: 1.6;
+}
+
+/* Chevron twist on the active recent row. */
+.recent-row .twist {
+  transition: transform var(--t-fast) ease;
+  color: var(--muted);
+  display: inline-flex;
+}
+.recent-row.collapsed .twist {
+  transform: rotate(-90deg);
+}
+
+/* ============================================================ *
+ * 2. Branch tree (smart-collapse pattern)
+ * ============================================================ */
+/* Top-level branch tree under the active recents row (mock .branch-tree). */
+.branch-tree {
+  margin: 4px 0 8px 17px;
+  padding: 6px 0 6px 10px;
+  border-left: 1.5px solid var(--brand-tint-2);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.branch-tree.guide-active {
+  border-left-color: var(--brand);
+}
+
+/* Nested diverging branches one level deeper (mock .btn-children). */
+.branch-children {
+  margin-left: 5px;
+  padding-left: 8px;
+  border-left: 1.5px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.branch-children.on-path {
+  border-left-color: var(--brand);
+}
+.branch-children.fork-edge {
+  border-left-color: var(--brand-tint-2);
+}
+
+/* A real conversation/branch node row (mock .btn-row). */
+.tree-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  padding: 4px 7px;
+  border-radius: 6px;
+  font-size: var(--fs-tree);
+  line-height: var(--lh-tree);
+  font-weight: 400;
+  color: var(--fg);
+  text-align: left;
+  transition: background var(--t-fast) ease;
+}
+.tree-row:hover {
+  background: var(--hover);
+}
+.tree-row .tree-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* "now"/timestamp suffix on the active branch row (mock .when). */
+.tree-row .when {
+  flex: 0 0 auto;
+  font-size: 10.5px;
+  color: var(--muted-2);
+  margin-left: 4px;
+}
+.tree-row.active .when {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Twist on a tree row (rotate -90deg when collapsed). */
+.tree-row .twist,
+.tree-twist {
+  display: inline-flex;
+  color: var(--muted);
+  transition: transform var(--t-fast) ease;
+}
+.tree-row.collapsed .twist,
+.tree-twist.collapsed {
+  transform: rotate(-90deg);
+}
+
+/* Node icons (lucide). Fork nodes use fork-ink (mock .ico / .ico.fork). */
+.tree-row .tree-icon {
+  display: inline-flex;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.tree-row.is-fork .tree-icon {
+  color: var(--fork-ink);
+}
+
+/* Ancestor of active branch: bolded fg-strong text. */
+.tree-row.on-path {
+  font-weight: 500;
+  color: var(--fg-strong);
+}
+
+/* The current branch (leaf): solid brand bg, white text. */
+.tree-row.active {
+  background: var(--brand);
+  color: #ffffff;
+  font-weight: 500;
+}
+.tree-row.active .tree-icon,
+.tree-row.active .twist {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* Collapsed-subtree placeholder — small muted row with a dot (mock .stub). */
+.stub {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 1px 0;
+  padding: 3px 8px;
+  font-size: var(--fs-stub);
+  line-height: var(--lh-tree);
+  color: var(--muted);
+  text-align: left;
+  border-radius: 5px;
+  transition: background var(--t-fast) ease;
+}
+.stub:hover {
+  background: var(--hover);
+  color: var(--fork-ink);
+}
+.stub .stub-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--muted-2);
+  flex: 0 0 4px;
+}
+
+/* Branch-tree footer — dashed-top "Fork from latest reply" (mock). */
+.branch-tree-foot {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--border);
+}
+.branch-tree-foot button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  padding: 5px 7px;
+  border-radius: 5px;
+  font-size: 11.5px;
+  color: var(--muted);
+  text-align: left;
+}
+.branch-tree-foot button:hover {
+  color: var(--fork-ink);
+  background: var(--brand-tint);
+}
+
+/* ============================================================ *
+ * 3. Conversation pane — vertical grid
+ *    [pane-head] [crumbs] [stream] [composer]
+ * ============================================================ */
+.pane {
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  grid-template-areas:
+    'pane-head'
+    'crumbs'
+    'stream'
+    'composer';
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+/* ---- Header (component 3) — 14px 24px, bottom border ------- */
+.pane-head {
+  grid-area: pane-head;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg);
+  /* Raise above the stream so the title/breadcrumb dropdowns paint over it. */
+  position: relative;
+  z-index: 30;
+}
+.pane-title-menu-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.pane-head .pane-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fg-strong);
+  cursor: pointer;
+  border-radius: 7px;
+  padding: 2px 6px;
+  margin-left: -6px;
+  transition: background var(--t-fast) ease;
+}
+.pane-head .pane-title:hover {
+  background: var(--hover);
+}
+.pane-head .spacer {
+  flex: 1;
+}
+.pane-head-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-ui);
+  color: var(--fg);
+  transition: background var(--t-fast) ease;
+}
+.pane-head-btn:hover {
+  background: var(--hover);
+}
+.pane-head-icon-btn {
+  display: inline-flex;
+  padding: 6px;
+  border-radius: 7px;
+  color: var(--muted);
+  transition: background var(--t-fast) ease;
+}
+.pane-head-icon-btn:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+
+/* ============================================================ *
+ * 4. Path breadcrumb strip (component 4)
+ *    bg-page, subtle bottom border, padding 10px 24px
+ * ============================================================ */
+.crumbs {
+  grid-area: crumbs;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 24px;
+  background: var(--bg-page);
+  border-bottom: 1px solid var(--border-subtle);
+  /* Must NOT clip: an `overflow` here forces overflow-y and chops the dropdown
+     popovers so they render "under" the content. Branch chips are few (we show
+     forks, not every message) so horizontal scroll isn't needed; let chips wrap
+     instead. Raise above the stream so popovers paint over it. */
+  flex-wrap: wrap;
+  row-gap: 6px;
+  position: relative;
+  z-index: 20;
+}
+
+/* Separator › between chips. */
+.crumb-sep {
+  color: var(--muted-2);
+  font-size: var(--fs-crumb);
+  flex-shrink: 0;
+}
+
+/* Wrapper keeping a separator + its chip aligned on one inline-flex row. */
+.crumb-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* Base chip — rounded-RECT (8px), not a pill (mock .crumb). */
+.crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-size: var(--fs-crumb);
+  font-weight: 500;
+  color: var(--fg);
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background var(--t-fast) ease;
+}
+
+/* root: plain text, muted icon, hover surfaces a white chip. */
+.crumb.root {
+  color: var(--fg);
+}
+.crumb.root:hover {
+  background: var(--bg);
+  border-color: var(--border-subtle);
+}
+
+/* collapsed-middle: white bg, dashed border, "… N hidden". */
+.crumb.collapsed-middle {
+  background: #fff;
+  border: 1px dashed var(--border);
+  color: var(--muted);
+  font-weight: 400;
+}
+.crumb.collapsed-middle:hover {
+  background: var(--bg-page);
+  color: var(--fg-strong);
+  border-style: solid;
+}
+
+/* fork: coral tint bg, coral ink. */
+.crumb.fork {
+  background: var(--brand-tint);
+  color: var(--fork-ink);
+}
+.crumb.fork:hover {
+  background: var(--brand-tint-2);
+}
+
+/* current: solid coral bg, white text (you are here). */
+.crumb.current {
+  background: var(--brand);
+  color: #ffffff;
+}
+
+/* Caret on a fork/current chip (dropdown trigger). */
+.crumb .crumb-caret {
+  display: inline-flex;
+  opacity: 0.75;
+}
+
+/* Dropdown popover container + menu (shadow-lg). */
+.crumb-dropdown {
+  position: relative;
+  display: inline-flex;
+}
+.crumb-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  min-width: 220px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lg);
+  padding: 6px;
+}
+.crumb-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 7px;
+  font-size: var(--fs-ui);
+  color: var(--fg);
+  text-align: left;
+  transition: background var(--t-fast) ease;
+}
+.crumb-menu-item:hover {
+  background: var(--hover);
+}
+/* active branch in the sibling list — coral tint highlight. */
+.crumb-menu-item.active {
+  background: var(--brand-tint);
+  color: var(--fork-ink);
+  font-weight: 500;
+}
+.crumb-menu-item.action {
+  color: var(--fork-ink);
+  border-top: 1px solid var(--border-subtle);
+  margin-top: 4px;
+  padding-top: 9px;
+}
+.crumb-menu-sep {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 4px 0;
+}
+/* level-number pill used in the collapsed-middle menu. */
+.level-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--r-pill);
+  background: var(--secondary);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+/* ============================================================ *
+ * 5. Message stream + centered 760px content column
+ * ============================================================ */
+.stream {
+  grid-area: stream;
+  overflow-y: auto;
+  background: var(--bg);
+}
+.stream-inner {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: 28px var(--content-pad) 40px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--msg-gap);   /* 28px message gap */
+}
+
+/* ---- Branch banner (component 5) — coral pill at top ------- */
+.branch-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  background: var(--brand-tint);
+  color: var(--fork-ink);
+  border: 1px solid var(--brand-tint-2);
+  border-radius: var(--r-banner);
+  font-size: var(--fs-ui);
+}
+/* "Branch" label is a white pill with a coral border (mock .branch-banner .label). */
+.branch-banner .banner-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #fff;
+  border: 1px solid var(--brand-tint-2);
+  border-radius: var(--r-pill);
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.branch-banner .banner-meta {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+/* ============================================================ *
+ * 6. Messages (component 6)
+ * ============================================================ */
+.msg {
+  position: relative;
+  display: flex;
+  gap: 14px;
+}
+
+/* Coral sparkle avatar — assistant only (mock: user messages have no avatar). */
+.avatar {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.avatar.assistant {
+  background: var(--brand);
+  color: #ffffff;
+}
+
+/* User bubble — left-aligned secondary bubble, no avatar, max 520px. */
+.msg.user .bubble {
+  align-self: flex-start;
+  background: var(--secondary);
+  border-radius: var(--r-card);
+  padding: 10px 14px;
+  max-width: 520px;
+  font-family: var(--font-ui);
+  font-size: var(--fs-user);
+  line-height: var(--lh-user);
+  color: var(--fg);
+}
+
+/* Assistant body — Source Serif 4, 15.5px / 1.62, fg-strong. */
+.msg.assistant .bubble {
+  font-family: var(--font-serif);
+  font-size: var(--fs-assistant);
+  line-height: var(--lh-assistant);
+  color: var(--fg-strong);
+  max-width: 100%;
+  padding-top: 3px;
+}
+.msg.assistant .bubble p {
+  margin: 0 0 0.7em;
+}
+.msg.assistant .bubble p:last-child {
+  margin-bottom: 0;
+}
+
+/* Streaming cursor affordance (status === 'streaming'). */
+.msg.streaming .bubble::after {
+  content: '▋';
+  color: var(--brand);
+  margin-left: 1px;
+  animation: bc-blink 1s steps(2, start) infinite;
+}
+@keyframes bc-blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+/* Error state on an assistant node (status === 'error'). */
+.msg.error .bubble {
+  color: var(--fork-ink);
+}
+.msg .error-text {
+  margin-top: 6px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--fork-ink);
+  background: var(--brand-tint);
+  border: 1px solid var(--brand-tint-2);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+/* ============================================================ *
+ * 6b. Markdown body — GFM + KaTeX math + highlighted code
+ * ============================================================ */
+.bubble .md > :first-child {
+  margin-top: 0;
+}
+.bubble .md > :last-child {
+  margin-bottom: 0;
+}
+.bubble .md p {
+  margin: 0 0 0.7em;
+}
+.bubble .md ul,
+.bubble .md ol {
+  margin: 0 0 0.7em;
+  padding-left: 1.45em;
+  list-style: revert; /* tokens.css reset removed bullets; restore in prose */
+}
+.bubble .md li {
+  margin: 0.2em 0;
+}
+.bubble .md h1,
+.bubble .md h2,
+.bubble .md h3,
+.bubble .md h4 {
+  font-family: var(--font-ui);
+  color: var(--fg-strong);
+  line-height: 1.3;
+  margin: 0.6em 0 0.4em;
+}
+.bubble .md h1 { font-size: 1.3em; }
+.bubble .md h2 { font-size: 1.18em; }
+.bubble .md h3 { font-size: 1.06em; }
+.bubble .md a {
+  color: var(--brand);
+  text-decoration: underline;
+}
+.bubble .md strong {
+  font-weight: 600;
+  color: var(--fg-strong);
+}
+.bubble .md blockquote {
+  margin: 0 0 0.7em;
+  padding: 2px 0 2px 12px;
+  border-left: 3px solid var(--brand-tint-2);
+  color: var(--muted);
+}
+.bubble .md hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1em 0;
+}
+
+/* Inline code — JetBrains Mono, secondary bg, fork-ink (mock .body code). */
+.bubble .md :not(pre) > code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--secondary);
+  color: var(--fork-ink);
+  padding: 1px 5px;
+  border-radius: 5px;
+  font-weight: 500;
+  white-space: break-spaces;
+}
+
+/* Fenced code block — bordered card, mono, horizontal scroll. */
+.bubble .md pre {
+  margin: 0 0 0.7em;
+  padding: 12px 14px;
+  background: var(--rail-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow-x: auto;
+}
+.bubble .md pre code {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--fg-strong);
+}
+/* highlight.js theme (github) paints its own bg on .hljs — clear it so our
+   bordered card bg shows through. */
+.bubble .md pre code.hljs {
+  background: transparent;
+  padding: 0;
+}
+
+/* KaTeX sizing — inline a touch larger; display math centered + scrollable. */
+.bubble .md .katex {
+  font-size: 1.04em;
+}
+.bubble .md .katex-display {
+  margin: 0.6em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 0;
+}
+
+/* Tables (GFM). */
+.bubble .md table {
+  border-collapse: collapse;
+  margin: 0 0 0.7em;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+}
+.bubble .md th,
+.bubble .md td {
+  border: 1px solid var(--border);
+  padding: 5px 10px;
+  text-align: left;
+}
+.bubble .md th {
+  background: var(--bg-page);
+  font-weight: 600;
+  color: var(--fg-strong);
+}
+
+/* ============================================================ *
+ * 7. Inline fork-point marker (component 7)
+ * ============================================================ */
+.fork-marker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0;
+  color: var(--fork-ink);
+  font-size: 12px;
+}
+.fork-marker::before,
+.fork-marker::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: repeating-linear-gradient(
+    to right,
+    var(--brand-tint-2) 0 6px,
+    transparent 6px 10px
+  );
+}
+.fork-marker .fork-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  background: var(--brand-tint);
+  border-radius: var(--r-pill);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.fork-marker .fork-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border: 1px solid var(--brand-tint-2);
+  background: var(--bg);
+  border-radius: var(--r-pill);
+  color: var(--fork-ink);
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background var(--t-fast) ease;
+}
+.fork-marker .fork-switch:hover {
+  background: var(--brand-tint);
+}
+
+/* Draft-branch affordance shown after the stream when "Fork from here" is armed. */
+.draft-fork {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px dashed var(--brand-tint-2);
+  background: var(--brand-tint);
+  border-radius: var(--r-banner);
+  color: var(--fork-ink);
+  font-size: var(--fs-ui);
+}
+.draft-fork-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  background: #fff;
+  border: 1px solid var(--brand-tint-2);
+  border-radius: var(--r-pill);
+  padding: 1px 8px;
+  font-size: 11px;
+}
+.draft-fork-text {
+  color: var(--muted);
+}
+.draft-fork-cancel {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  color: var(--fork-ink);
+  border: 1px solid var(--brand-tint-2);
+  background: #fff;
+  border-radius: var(--r-pill);
+  padding: 3px 10px;
+  font-size: 12px;
+}
+.draft-fork-cancel:hover {
+  background: var(--brand-tint-2);
+}
+
+/* Pending draft branch row in the sidebar tree (dashed = unsent). */
+.tree-row.active.draft {
+  background: transparent;
+  color: var(--fork-ink);
+  border: 1px dashed var(--brand-tint-2);
+  font-style: italic;
+}
+.tree-row.active.draft .tree-icon {
+  color: var(--fork-ink);
+}
+
+/* ============================================================ *
+ * 8. Message hover actions (component 8)
+ * ============================================================ */
+.msg-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity var(--t-fast) linear;
+}
+.msg:hover .msg-actions {
+  opacity: 1;
+}
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 7px;
+  font-size: 12px;
+  color: var(--muted);
+  transition: background var(--t-fast) ease, color var(--t-fast) ease;
+}
+.action-btn:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+
+/* Fork-from-here — coral-tinted, distinct from neutral actions. */
+.action-btn.fork-btn {
+  color: var(--fork-ink);
+}
+.action-btn.fork-btn:hover {
+  background: var(--brand-tint);
+}
+/* Thumbs-up toggled state. */
+.action-btn.liked {
+  color: var(--brand);
+  background: var(--brand-tint);
+}
+
+/* ============================================================ *
+ * 9. Composer (component 9)
+ * ============================================================ */
+.composer {
+  grid-area: composer;
+  padding: 14px 24px 18px;   /* outside the inner card */
+}
+.composer-inner {
+  max-width: var(--content-max);
+  margin: 0 auto;
+}
+.composer-card {
+  border: 1px solid var(--border);
+  border-radius: var(--r-composer);
+  padding: 12px 14px;
+  background: var(--bg);
+  transition: border-color var(--t-fast) ease, box-shadow var(--t-fast) ease;
+}
+.composer-card:focus-within {
+  border-color: var(--brand-tint-2);
+  box-shadow: var(--shadow-sm);
+}
+.composer-textarea {
+  width: 100%;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  font-family: var(--font-ui);
+  font-size: var(--fs-user);
+  line-height: var(--lh-user);
+  color: var(--fg-strong);
+  min-height: 24px;
+  max-height: 240px;
+}
+.composer-textarea::placeholder {
+  color: var(--muted-2);
+}
+.composer-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.composer-row .spacer {
+  flex: 1;
+}
+.composer-icon-btn {
+  display: inline-flex;
+  padding: 6px;
+  border-radius: var(--r-pill);
+  color: var(--muted);
+  transition: background var(--t-fast) ease;
+}
+.composer-icon-btn:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+/* "Ask" pill — primary action. */
+.composer-ask {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border-radius: var(--r-pill);
+  background: var(--brand);
+  color: #ffffff;
+  font-size: var(--fs-ui);
+  font-weight: 500;
+  transition: opacity var(--t-fast) ease;
+}
+.composer-ask:hover {
+  opacity: 0.92;
+}
+.composer-ask:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+/* model selector right-aligned. */
+.composer-model {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: var(--r-pill);
+  font-size: 12px;
+  color: var(--muted);
+  transition: background var(--t-fast) ease;
+}
+.composer-model:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+/* Model picker dropdown — opens UPWARD (the composer sits at the bottom). */
+.composer-model-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.crumb-menu.model-menu {
+  top: auto;
+  bottom: calc(100% + 6px);
+  left: auto;
+  right: 0;
+  min-width: 160px;
+}
+/* "Add folder" + similar neutral pill buttons in the composer row. */
+.composer-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-ui);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  transition: background var(--t-fast) ease;
+}
+.composer-pill-btn:hover {
+  background: var(--hover);
+}
+
+/* Ask split-button (primary send + caret to choose permission mode). */
+.composer-ask-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.composer-ask-wrap .composer-ask {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.composer-ask-caret {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 7px;
+  border-radius: 0 var(--r-pill) var(--r-pill) 0;
+  background: var(--brand);
+  color: #fff;
+  border-left: 1px solid rgba(255, 255, 255, 0.28);
+  transition: background var(--t-fast) ease;
+}
+.composer-ask-caret:hover {
+  background: var(--fork-ink);
+}
+/* "Act without asking" posture tints the split-button to flag elevated power. */
+.composer-ask.act,
+.composer-ask-caret.act {
+  background: var(--fork-ink);
+}
+
+/* Permission-mode menu (opens upward like the model menu). */
+.crumb-menu.ask-menu {
+  top: auto;
+  bottom: calc(100% + 6px);
+  left: 0;
+  min-width: 320px;
+}
+.mode-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: 8px;
+  text-align: left;
+  color: var(--fg);
+  transition: background var(--t-fast) ease;
+}
+.mode-item:hover {
+  background: var(--hover);
+}
+.mode-item .mode-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 2px;
+}
+.mode-item .mode-title {
+  font-size: var(--fs-ui);
+  font-weight: 500;
+  color: var(--fg-strong);
+}
+.mode-item .mode-desc {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Attached-folder chips above the composer card. */
+.folder-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.folder-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 6px 3px 9px;
+  border-radius: var(--r-pill);
+  font-size: 12px;
+  color: var(--fg);
+  background: var(--secondary);
+  border: 1px solid var(--border);
+}
+.folder-chip.branch {
+  background: var(--brand-tint);
+  border-color: var(--brand-tint-2);
+  color: var(--fork-ink);
+}
+.folder-chip-x {
+  display: inline-flex;
+  color: var(--muted);
+  border-radius: 50%;
+  padding: 1px;
+}
+.folder-chip-x:hover {
+  color: var(--fork-ink);
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* disclaimer under the composer. */
+.composer-disclaimer {
+  text-align: center;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--muted-2);
+}
+
+/* ============================================================ *
+ * Misc utility
+ * ============================================================ */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 8px;
+  color: var(--muted);
+  font-size: var(--fs-ui);
+}

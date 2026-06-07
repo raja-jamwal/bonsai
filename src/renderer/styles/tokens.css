@@ -1,0 +1,158 @@
+/*
+ * Design tokens — transcribed verbatim from the design handoff
+ * (design_handoff_branching_conversations/README.md → "Design tokens").
+ * Treat color tokens and typographic structure as binding (handoff "Fidelity").
+ *
+ * Also contains a minimal CSS reset + base body styles so the renderer paints
+ * on the warm cream canvas in Inter by default.
+ */
+
+:root {
+  /* ---- Colors (handoff "Colors") ------------------------------------- */
+  --bg: #ffffff;            /* card / surface */
+  --bg-page: #faf9f5;       /* warm cream canvas (breadcrumb strip, body) */
+  --fg: #3d3929;            /* warm body text */
+  --fg-strong: #1f1e1d;     /* near-black, warm */
+  --muted: #87867f;         /* helper text */
+  --muted-2: #b3b1a5;       /* very muted (separators, level pills) */
+  --border: #e8e6dc;        /* default border */
+  --border-subtle: #f0eee6; /* whisper divider */
+  --hover: #f5f3ed;         /* warm hover */
+  --secondary: #f0ede2;     /* chip / pill bg, user msg bubble */
+  --brand: #c96442;         /* Claude coral — active branch, primary actions */
+  --brand-tint: #faf0eb;    /* coral wash — fork chip bg, branch banner */
+  --brand-tint-2: #f3e0d3;  /* deeper coral wash — fork borders */
+  --fork-ink: #8a3f23;      /* deep coral — text on coral tints, fork icons */
+  --rail-bg: #f7f5ee;       /* secondary rail bg if used */
+
+  /* ---- Shadows (handoff "Shadows") ----------------------------------- */
+  --shadow-sm: 0 1px 2px rgba(31, 30, 29, 0.04), 0 1px 3px rgba(31, 30, 29, 0.06);
+  --shadow-md: 0 4px 12px rgba(31, 30, 29, 0.06), 0 2px 4px rgba(31, 30, 29, 0.04);
+  --shadow-lg: 0 12px 32px rgba(31, 30, 29, 0.1), 0 4px 12px rgba(31, 30, 29, 0.06);
+
+  /* ---- Font families ------------------------------------------------- */
+  --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* ---- Font sizes (handoff "Typography" table) ----------------------- */
+  --fs-assistant: 15.5px;   /* assistant message body (serif) */
+  --fs-user: 14px;          /* user message body */
+  --fs-ui: 13.5px;          /* UI chrome (13–14px) */
+  --fs-code: 12.5px;        /* inline code */
+  --fs-eyebrow: 11.5px;     /* eyebrow / section labels */
+  --fs-crumb: 12.5px;       /* breadcrumb chip */
+  --fs-tree: 12.5px;        /* tree row */
+  --fs-stub: 11px;          /* stub row */
+
+  /* ---- Line heights -------------------------------------------------- */
+  --lh-assistant: 1.62;
+  --lh-user: 1.5;
+  --lh-tree: 1.3;
+
+  /* ---- Layout constants (handoff "Spacing" / "Layout") --------------- */
+  --sidebar-w: 280px;       /* fixed left sidebar */
+  --content-max: 760px;     /* conversation column max-width */
+  --content-pad: 32px;      /* conversation column horizontal padding */
+  --msg-gap: 28px;          /* vertical gap between messages */
+
+  /* ---- Radii (handoff "Border radius") ------------------------------- */
+  --r-pill: 999px;          /* chips / pills / buttons */
+  --r-card: 12px;           /* cards / message bubbles */
+  --r-banner: 10px;         /* branch banner */
+  --r-composer: 14px;       /* composer card */
+  --r-tree: 7px;            /* tree rows (6–8px) */
+
+  /* ---- Motion (handoff "Animation") ---------------------------------- */
+  --t-fast: 150ms;
+}
+
+/* ===== Minimal reset ================================================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+input,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ===== Base body ====================================================== */
+body {
+  background: var(--bg-page);          /* warm cream canvas */
+  color: var(--fg);
+  font-family: var(--font-ui);         /* Inter for UI chrome by default */
+  font-size: var(--fs-ui);
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+#root {
+  height: 100%;
+}
+
+/* ===== Typographic base utility rules (handoff "Typography" table) ==== */
+
+/* Eyebrow / section labels — Inter 11.5px, uppercase, 0.04em tracking, 500 */
+.eyebrow {
+  font-size: var(--fs-eyebrow);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+/* Inline code — JetBrains Mono 12.5px / 500, secondary bg, fork-ink text */
+code,
+.inline-code {
+  font-family: var(--font-mono);
+  font-size: var(--fs-code);
+  font-weight: 500;
+  background: var(--secondary);
+  color: var(--fork-ink);
+  padding: 1px 5px;
+  border-radius: 5px;
+}
+
+/* Strong — 600 weight in fg-strong */
+strong,
+.strong {
+  font-weight: 600;
+  color: var(--fg-strong);
+}

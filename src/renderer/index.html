@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      Content-Security-Policy (NF-1, defense-in-depth). Scripts are app-only
+      (no remote/eval); styles allow inline (React style attrs) + Google Fonts
+      CSS; fonts from gstatic; images self+data URIs. No connect-src to the
+      network — the renderer talks only to main via the IPC bridge.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'"
+    />
+    <!--
+      Renderer entry HTML (Vite root = src/renderer).
+      Honors AR-1: this is a sandboxed browser context — no Node, no CLI, no DB.
+      All privileged work happens in main via the window.api bridge.
+    -->
+    <title>Branching Claude</title>
+
+    <!--
+      Google Fonts per the design handoff "Typography" table:
+        - Inter            : UI chrome, user message bodies
+        - Source Serif 4   : assistant message bodies
+        - JetBrains Mono   : inline code
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Design tokens must load before component/app styles cascade. -->
+    <link rel="stylesheet" href="./styles/tokens.css" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./main.tsx"></script>
+  </body>
+</html>
