@@ -1,0 +1,101 @@
+// Main process entry point — app lifecycle and engine wiring
+// (TECHNICAL_REQUIREMENTS §1 AR-1, §5 persistence, §7 NF-1/NF-3).
+//
+// On ready: open the SQLite DB in userData (DB-1), recover orphaned streaming
+// nodes from a prior crash (NF-3), resolve the `claude` binary (CL-10), build the
+// Repo and ClaudeRunner, create the sandboxed window (AR-1), register the IPC
+// handlers, and load the renderer (electron-vite dev URL or built file).
+
+import { app, BrowserWindow } from 'electron';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+import { openDatabase, recoverOrphans } from './db/database.js';
+import { Repo } from './db/repo.js';
+import { ClaudeRunner } from './claude/runner.js';
+import { resolveClaude } from './claude/resolve.js';
+import { registerIpcHandlers } from './ipc/handlers.js';
+import type { EngineStatus } from '@shared/types';
+
+// ESM ("type":"module"): derive __dirname from import.meta.url.
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// Pin the app name so userData (the SQLite location) is the SAME regardless of
+// how the app is launched. Without this, an unpackaged launch can resolve to the
+// default "Electron" name and write to a *different* userData dir than
+// `npm run dev`, silently splitting the database across two files.
+app.setName('branching-claude');
+
+// The single application window. Kept module-scoped so getWindow() can hand it to
+// the IPC layer for per-turn streaming ports.
+let win: BrowserWindow | null = null;
+
+/**
+ * Create the main window with the locked-down web preferences mandated by AR-1 /
+ * NF-1: context isolation on, Node integration off, sandbox on. The renderer can
+ * only reach privileged work through the preload bridge.
+ */
+function createWindow(): void {
+  win = new BrowserWindow({
+    width: 1280,
+    height: 800,
+    show: false,
+    webPreferences: {
+      // Built preload sits next to the built main bundle: out/main -> out/preload.
+      preload: join(__dirname, '../preload/index.cjs'),
+      contextIsolation: true, // AR-1
+      nodeIntegration: false, // AR-1
+      sandbox: true, // AR-1
+    },
+  });
+
+  win.on('ready-to-show', () => win?.show());
+  win.on('closed', () => {
+    win = null;
+  });
+
+  // electron-vite convention: in dev the renderer is served from a vite URL; in
+  // production load the built HTML from disk.
+  const devUrl = process.env['ELECTRON_RENDERER_URL'];
+  if (devUrl) {
+    void win.loadURL(devUrl);
+  } else {
+    void win.loadFile(join(__dirname, '../renderer/index.html'));
+  }
+}
+
+// All engine setup happens after the app is ready (privileged APIs available).
+void app.whenReady().then(async () => {
+  // DB-1: single SQLite file in the app's userData directory.
+  const dbPath = join(app.getPath('userData'), 'branching-claude.db');
+  const db = openDatabase(dbPath); // pragmas (DB-2) + migrations (DB-6)
+
+  // NF-3: mark any nodes left mid-stream by a crash as errored before serving UI.
+  recoverOrphans(db);
+
+  const repo = new Repo(db);
+
+  // CL-10: resolve the claude binary up front; status is surfaced to the renderer
+  // via engine:status rather than failing silently mid-turn.
+  const status: EngineStatus = await resolveClaude();
+  const runner = new ClaudeRunner(status.claudePath ?? 'claude');
+
+  createWindow();
+
+  registerIpcHandlers({
+    repo,
+    runner,
+    engineStatus: () => status,
+    getWindow: () => win,
+  });
+
+  // macOS: re-create a window when the dock icon is clicked and none are open.
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+});
+
+// Standard lifecycle: quit when all windows close, except on macOS where apps
+// conventionally stay active until the user explicitly quits.
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') app.quit();
+});
