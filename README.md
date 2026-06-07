@@ -3,9 +3,6 @@
 A tree-structured, branching conversation client for the Claude CLI, built in **Electron + SQLite + React**.
 Fork from any message, navigate branches, and keep a recoverable tree of explorations.
 
-Implements [`TECHNICAL_REQUIREMENTS.md`](./TECHNICAL_REQUIREMENTS.md) (the engine) and the
-[design handoff](./design_handoff_branching_conversations/README.md) (the UI).
-
 ## Architecture
 
 | Concern | Process | Where |
