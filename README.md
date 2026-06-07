@@ -25,37 +25,35 @@ Fork from any message, navigate branches, and keep a recoverable tree of explora
 - Node 20+ and the `claude` CLI installed (verified against CLI `2.1.168`).
 - The `claude` binary must be on your `PATH` — run `which claude` to confirm.
 
-## Running (recommended: terminal via npm)
-
-**Run from a terminal using npm — do not use the DMG on macOS 26+.**
-
-macOS 26 enforces strict code-signature validation when any process is spawned
-programmatically. The `claude` CLI binary (signed by Anthropic with hardened
-runtime) is currently rejected with `SIGKILL (Code Signature Invalid)` when
-launched as a child process of an ad-hoc-signed app like the Bonsai DMG. The
-same binary runs fine when launched directly from a terminal. The root fix
-requires either a paid Apple Developer ID + notarization for Bonsai, or a
-re-signed claude CLI from Anthropic that satisfies macOS 26's stricter policy.
-
-**Workaround — run in dev mode from a terminal:**
+## Running
 
 ```bash
 git clone https://github.com/raja-jamwal/bonsai.git
 cd bonsai
 npm install        # installs deps + rebuilds better-sqlite3 for Electron
-npm run dev        # launch the app (HMR, full claude subprocess access)
+npm run dev        # launch in dev (HMR)
+npm run build      # production bundle into out/
+npm start          # run the built app
+npm run package    # build a distributable (electron-builder)
 ```
 
 The app window opens automatically. Data is stored in
 `~/Library/Application Support/Bonsai/bonsai.db`.
 
-Other npm commands:
+## Known issue — macOS 26.5.1 (Code Signature Invalid)
 
-```bash
-npm run build      # production bundle into out/
-npm start          # run the built app (same process-spawn behaviour as dev)
-npm run package    # build the DMG (works on macOS <26 or with a Developer ID)
-```
+On macOS 26.5.1 the `claude` CLI binary (v2.1.168) is killed with
+`SIGKILL (Code Signature Invalid)` every time it is spawned as a subprocess —
+regardless of the parent process (Electron, Node.js, Python, shell, etc.) or
+whether a PTY is used. Interactive use from the terminal prompt is unaffected.
+
+This is a macOS 26 security-policy change, not a Bonsai bug. `npm run dev`
+does **not** work around it — Electron still spawns claude as a child process.
+
+**Fix:** update the `claude` CLI. Run `claude update` or reinstall from
+`https://claude.ai/download`. A newer signed build from Anthropic should pass
+the validation. Until then the app will show *"claude exited with code unknown"*
+on every turn.
 
 ## Test
 
