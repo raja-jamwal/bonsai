@@ -41,6 +41,17 @@ export interface Attachment {
   added_at: number;
 }
 
+/** A single search hit returned by conversation:search. */
+export interface SearchResult {
+  conversationId: string;
+  conversationTitle: string;
+  /** null = the hit was in the conversation title; present = a message node matched. */
+  nodeId: string | null;
+  /** Text excerpt around the match (trimmed, 120 chars max). */
+  snippet: string;
+  role: Role | null;
+}
+
 /** Lightweight summary returned by conversation:list. */
 export interface ConversationSummary {
   id: string;
@@ -211,6 +222,7 @@ export const IPC = {
   conversationRename: 'conversation:rename',
   conversationDelete: 'conversation:delete',
   conversationSetModel: 'conversation:setModel',
+  conversationSearch: 'conversation:search',
   nodeGenerateTitle: 'node:generateTitle',
   turnSend: 'turn:send',
   turnRegenerate: 'turn:regenerate',
@@ -249,6 +261,7 @@ export interface EngineStatus {
 export interface BridgeApi {
   createConversation(args: CreateConversationArgs): Promise<string>;
   listConversations(): Promise<ConversationSummary[]>;
+  searchConversations(query: string): Promise<SearchResult[]>;
   getConversation(id: string): Promise<ConversationTree>;
   renameConversation(args: RenameConversationArgs): Promise<void>;
   deleteConversation(id: string): Promise<void>;

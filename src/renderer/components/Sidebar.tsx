@@ -1,15 +1,17 @@
 // Sidebar.tsx — handoff component 1 (Recents list) + a new-chat button +
 // the smart-collapse BranchTree (component 2) nested under the active row.
 //
-// The active conversation's recents row differs (handoff §"Left sidebar —
-// Recents list"): tinted --brand-tint bg + --fork-ink text, a fork-count badge
-// "🌿 N" (white pill, coral border), and a chevron twist that toggles the tree
-// (store.toggleTree / store.branchTreeVisible — persisted per-user).
+// Search: clicking the search icon opens an input at the top of the sidebar.
+// While query is non-empty the recents list is replaced by search results;
+// each result shows the conversation title + a content snippet (if a message
+// matched rather than the title). Clicking a result opens the conversation
+// and, for content hits, navigates to the matching node's branch.
+import { useState, useEffect, useRef } from 'react';
 import { useStore } from '../state/store';
 import { api } from '../api';
 import { Icon } from './Icon';
 import { BranchTree } from './BranchTree';
-import type { ConversationSummary } from '@shared/types';
+import type { ConversationSummary, SearchResult } from '@shared/types';
 
 export function Sidebar() {
   const store = useStore();
@@ -19,6 +21,44 @@ export function Sidebar() {
     branchTreeVisible,
     nodes,
   } = store;
+
+  // Search state (local — not in the global store).
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Focus the input whenever the search panel opens.
+  useEffect(() => {
+    if (searchOpen) inputRef.current?.focus();
+  }, [searchOpen]);
+
+  // Debounced search: fires 200 ms after the query stops changing.
+  useEffect(() => {
+    if (!query.trim()) {
+      setResults([]);
+      return;
+    }
+    const timer = setTimeout(() => {
+      void api.searchConversations(query.trim()).then(setResults);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  function closeSearch(): void {
+    setSearchOpen(false);
+    setQuery('');
+    setResults([]);
+  }
+
+  async function openSearchResult(result: SearchResult): Promise<void> {
+    closeSearch();
+    await store.openConversation(result.conversationId);
+    // For content hits, navigate to the branch that contains the matched node.
+    if (result.nodeId) {
+      await store.switchLeaf(result.nodeId);
+    }
+  }
 
   // Fork count for the active conversation = number of leaves (distinct
   // branches incl. root continuation). A leaf is a node with no children.
@@ -85,29 +125,91 @@ export function Sidebar() {
     );
   }
 
+  function renderSearchResult(r: SearchResult, i: number) {
+    const isActive = r.conversationId === activeConversationId;
+    return (
+      <button
+        key={`${r.conversationId}-${r.nodeId ?? 'title'}-${i}`}
+        type="button"
+        className={['search-result-row', isActive ? 'active' : ''].filter(Boolean).join(' ')}
+        onClick={() => void openSearchResult(r)}
+      >
+        <span className="search-result-title">
+          {r.conversationTitle || 'Untitled conversation'}
+        </span>
+        {r.nodeId ? (
+          <span className="search-result-snippet">{r.snippet}</span>
+        ) : null}
+      </button>
+    );
+  }
+
   return (
     <aside className="sidebar">
-      {/* Section label row + new-chat button (handoff sidebar top). */}
-      <div
-        className="sidebar-section-label"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        Recents
-        <button
-          type="button"
-          className="pane-head-icon-btn"
-          title="New conversation"
-          onClick={() => void onNewChat()}
-        >
-          <Icon name="square-pen" size={15} />
-        </button>
+      {/* Section label row: Recents (or search input) + icon buttons. */}
+      <div className="sidebar-section-label sidebar-header-row">
+        {searchOpen ? (
+          <div className="search-input-wrap">
+            <Icon name="search" size={13} className="search-input-icon" />
+            <input
+              ref={inputRef}
+              className="search-input"
+              placeholder="Search conversations…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') closeSearch();
+              }}
+            />
+            {query ? (
+              <button
+                type="button"
+                className="search-clear-btn"
+                onClick={() => setQuery('')}
+                title="Clear"
+              >
+                <Icon name="x" size={12} />
+              </button>
+            ) : null}
+          </div>
+        ) : (
+          <span>Recents</span>
+        )}
+
+        <div className="sidebar-header-actions">
+          <button
+            type="button"
+            className={`pane-head-icon-btn${searchOpen ? ' active' : ''}`}
+            title={searchOpen ? 'Close search' : 'Search conversations'}
+            onClick={() => (searchOpen ? closeSearch() : setSearchOpen(true))}
+          >
+            <Icon name="search" size={15} />
+          </button>
+          {!searchOpen ? (
+            <button
+              type="button"
+              className="pane-head-icon-btn"
+              title="New conversation"
+              onClick={() => void onNewChat()}
+            >
+              <Icon name="square-pen" size={15} />
+            </button>
+          ) : null}
+        </div>
       </div>
 
-      {conversations.map(renderRecent)}
+      {/* Content: search results when querying, recents otherwise. */}
+      {searchOpen && query.trim() ? (
+        results.length > 0 ? (
+          <div className="search-results">
+            {results.map(renderSearchResult)}
+          </div>
+        ) : (
+          <div className="search-empty">No results for "{query}"</div>
+        )
+      ) : (
+        conversations.map(renderRecent)
+      )}
     </aside>
   );
 }

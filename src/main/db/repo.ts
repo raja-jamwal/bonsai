@@ -10,11 +10,26 @@ import type {
   ConversationSummary,
   ConversationTree,
   MessageNode,
+  SearchResult,
 } from '@shared/types';
 
 /** epoch-ms timestamp helper (per project convention). */
 function nowMs(): number {
   return Date.now();
+}
+
+/** Extract a ~120-char excerpt centered on the first occurrence of `query`. */
+function extractSnippet(content: string, query: string, maxLen = 120): string {
+  const flat = content.replace(/\n+/g, ' ').trim();
+  const lower = flat.toLowerCase();
+  const idx = lower.indexOf(query.toLowerCase());
+  if (idx === -1) return flat.slice(0, maxLen);
+  const start = Math.max(0, idx - 40);
+  const end = Math.min(flat.length, idx + query.length + 80);
+  let snippet = flat.slice(start, end);
+  if (start > 0) snippet = '…' + snippet;
+  if (end < flat.length) snippet += '…';
+  return snippet;
 }
 
 export class Repo {
@@ -42,6 +57,7 @@ export class Repo {
     effectiveDirs: Database.Statement;
     insertAttachment: Database.Statement;
     removeAttachment: Database.Statement;
+    searchConversations: Database.Statement;
   };
 
   constructor(db: Database.Database) {
@@ -138,6 +154,34 @@ export class Repo {
          VALUES (@id, @conversation_id, @node_id, @dir_path, @added_at)`
       ),
       removeAttachment: db.prepare(`DELETE FROM attachments WHERE id = ?`),
+      searchConversations: db.prepare(
+        // UNION of title hits (nodeId NULL) and content hits, newest-conversation first.
+        // Two ? params: both receive the same '%pattern%' value.
+        `SELECT 'title'   AS match_type,
+                c.id      AS conversation_id,
+                c.title   AS conversation_title,
+                NULL      AS node_id,
+                NULL      AS role,
+                NULL      AS content
+           FROM conversations c
+          WHERE c.title LIKE ? ESCAPE '\\'
+
+         UNION ALL
+
+         SELECT 'content'  AS match_type,
+                c.id       AS conversation_id,
+                c.title    AS conversation_title,
+                n.id       AS node_id,
+                n.role     AS role,
+                n.content  AS content
+           FROM nodes n
+           JOIN conversations c ON c.id = n.conversation_id
+          WHERE n.content LIKE ? ESCAPE '\\'
+            AND n.status IN ('complete', 'error')
+
+          ORDER BY conversation_id
+          LIMIT 50`
+      ),
     };
   }
 
@@ -160,6 +204,35 @@ export class Repo {
   /** Newest-updated first. */
   listConversations(): ConversationSummary[] {
     return this.stmts.listConversations.all() as ConversationSummary[];
+  }
+
+  /**
+   * Full-text-style search across conversation titles and message content.
+   * Returns up to 50 hits (title matches + content matches) ordered by
+   * conversation id. LIKE-based; case-insensitive for ASCII.
+   */
+  searchConversations(query: string): SearchResult[] {
+    if (!query.trim()) return [];
+    // Escape LIKE special chars so user input is treated as literal text.
+    const escaped = query.replace(/[%_\\]/g, '\\$&');
+    const pattern = `%${escaped}%`;
+    const rows = this.stmts.searchConversations.all(pattern, pattern) as Array<{
+      match_type: 'title' | 'content';
+      conversation_id: string;
+      conversation_title: string;
+      node_id: string | null;
+      role: 'user' | 'assistant' | null;
+      content: string | null;
+    }>;
+    return rows.map((row) => ({
+      conversationId: row.conversation_id,
+      conversationTitle: row.conversation_title || '(Untitled)',
+      nodeId: row.node_id,
+      snippet: row.content
+        ? extractSnippet(row.content, query)
+        : (row.conversation_title || '(Untitled)'),
+      role: row.role,
+    }));
   }
 
   /** Full tree: conversation + all nodes + all attachments. */

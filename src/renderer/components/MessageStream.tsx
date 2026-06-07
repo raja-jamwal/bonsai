@@ -12,7 +12,7 @@
 // raw HTML from model text, so nothing is injected; math/code markup is built by
 // the trusted rehype plugins. No dangerouslySetInnerHTML of model output.
 //
-// Hover actions (component 8): Copy; thumbs up (assistant only); coral
+// Hover actions (component 8): Copy; trash (all messages); coral
 // "Fork from here" -> store.forkFrom(node.id), on both roles.
 //
 // Inline fork-point marker (component 7): after any on-path node with >1 child,
@@ -47,7 +47,7 @@ function Sparkle() {
 
 export function MessageStream() {
   const store = useStore();
-  const [liked, setLiked] = useState<Set<string>>(() => new Set());
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const path = store.activePath();
   if (path.length === 0) return null;
 
@@ -55,12 +55,17 @@ export function MessageStream() {
     void navigator.clipboard?.writeText(text);
   }
 
-  function toggleLike(id: string): void {
-    setLiked((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+  function confirmDelete(id: string): void {
+    setConfirmDeleteId(id);
+  }
+
+  function cancelDelete(): void {
+    setConfirmDeleteId(null);
+  }
+
+  function executeDelete(id: string): void {
+    setConfirmDeleteId(null);
+    void store.deleteNode(id);
   }
 
   /**
@@ -165,19 +170,14 @@ export function MessageStream() {
               <Icon name="copy" size={13} />
               Copy
             </button>
-            {/* Assistant-only thumbs-up (mock). Local toggle — interactive,
-                highlights coral when set. "Fork from here" on an assistant reply
-                already performs a regenerate, so no action is lost. */}
-            {!isUser ? (
-              <button
-                type="button"
-                className={`action-btn${liked.has(node.id) ? ' liked' : ''}`}
-                title="Good response"
-                onClick={() => toggleLike(node.id)}
-              >
-                <Icon name="thumbs-up" size={13} />
-              </button>
-            ) : null}
+            <button
+              type="button"
+              className="action-btn delete-btn"
+              title="Delete message"
+              onClick={() => confirmDelete(node.id)}
+            >
+              <Icon name="trash-2" size={13} />
+            </button>
             <button
               type="button"
               className="action-btn fork-btn"
@@ -187,6 +187,25 @@ export function MessageStream() {
               Fork from here
             </button>
           </div>
+          {confirmDeleteId === node.id ? (
+            <div className="delete-confirm">
+              <span className="delete-confirm-text">Delete this message?</span>
+              <button
+                type="button"
+                className="delete-confirm-yes"
+                onClick={() => executeDelete(node.id)}
+              >
+                Delete
+              </button>
+              <button
+                type="button"
+                className="delete-confirm-cancel"
+                onClick={cancelDelete}
+              >
+                Cancel
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
     );

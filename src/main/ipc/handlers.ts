@@ -28,6 +28,7 @@ import type {
   TurnStarted,
   ConversationSummary,
   ConversationTree,
+  SearchResult,
 } from '@shared/types';
 import type { Repo } from '../db/repo.js';
 import type { ClaudeRunner } from '../claude/runner.js';
@@ -87,6 +88,11 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     IPC.conversationSetModel,
     (_e, args: { id: string; model: string | null }): void =>
       repo.setModel(args.id, args.model)
+  );
+
+  ipcMain.handle(
+    IPC.conversationSearch,
+    (_e, query: string): SearchResult[] => repo.searchConversations(query)
   );
 
   // node:generateTitle — auto-name a branch (handoff open-question 1). Summarize

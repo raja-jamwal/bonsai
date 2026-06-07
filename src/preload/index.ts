@@ -30,6 +30,7 @@ import type {
   EngineStatus,
   StreamEvent,
   TurnEventHandler,
+  SearchResult,
 } from '@shared/types';
 
 // ---------------------------------------------------------------------------
@@ -73,6 +74,9 @@ const api: BridgeApi = {
 
   listConversations: (): Promise<ConversationSummary[]> =>
     ipcRenderer.invoke(IPC.conversationList),
+
+  searchConversations: (query: string): Promise<SearchResult[]> =>
+    ipcRenderer.invoke(IPC.conversationSearch, query),
 
   getConversation: (id: string): Promise<ConversationTree> =>
     ipcRenderer.invoke(IPC.conversationGet, id),

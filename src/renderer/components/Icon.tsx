@@ -28,6 +28,7 @@ import {
   FolderPlus,
   ChevronsRight,
   X,
+  Trash2,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -55,7 +56,8 @@ export type IconName =
   | 'folder'
   | 'folder-plus'
   | 'chevrons-right'
-  | 'x';
+  | 'x'
+  | 'trash-2';
 
 // Map kebab-case design names -> the imported lucide components.
 const REGISTRY: Record<IconName, LucideIcon> = {
@@ -82,6 +84,7 @@ const REGISTRY: Record<IconName, LucideIcon> = {
   'folder-plus': FolderPlus,
   'chevrons-right': ChevronsRight,
   x: X,
+  'trash-2': Trash2,
 };
 
 export interface IconProps {

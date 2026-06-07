@@ -46,6 +46,107 @@
   padding: 12px 10px 6px;
 }
 
+/* Header row flex layout (label + icon buttons). */
+.sidebar-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.sidebar-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Search input that replaces the "Recents" label. */
+.search-input-wrap {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: 5px;
+  background: var(--hover);
+  border-radius: 7px;
+  padding: 3px 7px;
+  margin-right: 4px;
+}
+.search-input-icon {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 12px;
+  color: var(--fg);
+  min-width: 0;
+}
+.search-input::placeholder {
+  color: var(--muted);
+}
+.search-clear-btn {
+  color: var(--muted);
+  display: inline-flex;
+  padding: 1px;
+  border-radius: 3px;
+  transition: color var(--t-fast) ease;
+}
+.search-clear-btn:hover {
+  color: var(--fg);
+}
+
+/* Active state on the search icon button when search is open. */
+.pane-head-icon-btn.active {
+  color: var(--brand);
+}
+
+/* Search result rows — mirror recent-row but with a snippet line. */
+.search-result-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: var(--r-tree);
+  text-align: left;
+  transition: background var(--t-fast) ease;
+}
+.search-result-row:hover {
+  background: var(--hover);
+}
+.search-result-row.active {
+  background: var(--brand-tint);
+}
+.search-result-title {
+  font-size: 13px;
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+.search-result-row.active .search-result-title {
+  color: var(--fork-ink);
+  font-weight: 500;
+}
+.search-result-snippet {
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+
+/* Empty-state message when no results. */
+.search-empty {
+  padding: 12px 12px 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
 /* Recents list row (one per top-level conversation). */
 .recent-row {
   display: flex;
@@ -890,10 +991,48 @@
 .action-btn.fork-btn:hover {
   background: var(--brand-tint);
 }
-/* Thumbs-up toggled state. */
-.action-btn.liked {
-  color: var(--brand);
-  background: var(--brand-tint);
+/* Delete button — red on hover. */
+.action-btn.delete-btn:hover {
+  color: #c0392b;
+  background: #fdf0ef;
+}
+
+/* Inline delete confirmation. */
+.delete-confirm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: var(--hover);
+  font-size: 12px;
+  width: fit-content;
+}
+.delete-confirm-text {
+  color: var(--muted);
+}
+.delete-confirm-yes {
+  padding: 3px 10px;
+  border-radius: 5px;
+  font-size: 12px;
+  background: #c0392b;
+  color: #fff;
+  transition: background var(--t-fast) ease;
+}
+.delete-confirm-yes:hover {
+  background: #a93226;
+}
+.delete-confirm-cancel {
+  padding: 3px 10px;
+  border-radius: 5px;
+  font-size: 12px;
+  color: var(--muted);
+  transition: background var(--t-fast) ease, color var(--t-fast) ease;
+}
+.delete-confirm-cancel:hover {
+  background: var(--hover);
+  color: var(--fg);
 }
 
 /* ============================================================ *

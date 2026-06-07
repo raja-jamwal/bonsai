@@ -119,6 +119,111 @@ describe('Repo — branching model', () => {
   });
 });
 
+describe('Repo — search', () => {
+  it('returns empty for a blank query', () => {
+    expect(repo.searchConversations('')).toEqual([]);
+    expect(repo.searchConversations('   ')).toEqual([]);
+  });
+
+  it('returns empty when nothing matches', () => {
+    repo.createConversation({ title: 'Hello World' });
+    expect(repo.searchConversations('xyzzy_impossible_match')).toHaveLength(0);
+  });
+
+  it('finds a conversation by title (exact substring)', () => {
+    const id = repo.createConversation({ title: 'Banana split recipe' });
+    const results = repo.searchConversations('Banana');
+    const hit = results.find((r) => r.conversationId === id);
+    expect(hit).toBeDefined();
+    expect(hit?.nodeId).toBeNull();
+    expect(hit?.role).toBeNull();
+  });
+
+  it('is case-insensitive for title matches', () => {
+    const id = repo.createConversation({ title: 'Hello World' });
+    const upper = repo.searchConversations('HELLO');
+    expect(upper.some((r) => r.conversationId === id)).toBe(true);
+    const lower = repo.searchConversations('world');
+    expect(lower.some((r) => r.conversationId === id)).toBe(true);
+  });
+
+  it('finds a user message by content', () => {
+    const id = repo.createConversation({ title: 'content search test' });
+    const user = repo.insertUserNode({
+      conversationId: id,
+      parentId: null,
+      content: 'unique phrase zephyr cloud',
+    });
+    const results = repo.searchConversations('zephyr cloud');
+    const hit = results.find((r) => r.nodeId === user.id);
+    expect(hit).toBeDefined();
+    expect(hit?.conversationId).toBe(id);
+    expect(hit?.role).toBe('user');
+    expect(hit?.snippet).toContain('zephyr cloud');
+  });
+
+  it('finds an assistant message by content', () => {
+    const id = repo.createConversation({ title: 'assistant search' });
+    const user = repo.insertUserNode({ conversationId: id, parentId: null, content: 'q' });
+    const asst = repo.insertStreamingAssistant({ conversationId: id, parentId: user.id, model: null });
+    repo.completeAssistant(asst.id, {
+      content: 'the answer contains luminary wisdom',
+      inputTokens: null,
+      outputTokens: null,
+      costUsd: null,
+    });
+    const results = repo.searchConversations('luminary wisdom');
+    const hit = results.find((r) => r.nodeId === asst.id);
+    expect(hit).toBeDefined();
+    expect(hit?.role).toBe('assistant');
+    expect(hit?.snippet).toContain('luminary wisdom');
+  });
+
+  it('does not include streaming nodes in content results', () => {
+    const id = repo.createConversation({ title: 'streaming test' });
+    const user = repo.insertUserNode({ conversationId: id, parentId: null, content: 'q' });
+    // streaming node — must NOT appear in search
+    repo.insertStreamingAssistant({ conversationId: id, parentId: user.id, model: null });
+    // No completeAssistant call — stays 'streaming'.
+    const results = repo.searchConversations('streaming test');
+    // title match is fine; node match must not exist
+    const nodeHits = results.filter((r) => r.nodeId !== null && r.conversationId === id);
+    expect(nodeHits).toHaveLength(0);
+  });
+
+  it('returns both title and content hits for the same conversation', () => {
+    const id = repo.createConversation({ title: 'overlap query term' });
+    repo.insertUserNode({ conversationId: id, parentId: null, content: 'overlap query term in message' });
+    const results = repo.searchConversations('overlap query term');
+    const forConv = results.filter((r) => r.conversationId === id);
+    // Should have at least a title hit (nodeId null) AND a content hit (nodeId present).
+    expect(forConv.some((r) => r.nodeId === null)).toBe(true);
+    expect(forConv.some((r) => r.nodeId !== null)).toBe(true);
+  });
+
+  it('snippet centers on the matched text', () => {
+    const id = repo.createConversation({ title: 'snippet test' });
+    const user = repo.insertUserNode({
+      conversationId: id,
+      parentId: null,
+      content: 'a'.repeat(80) + 'targetword' + 'b'.repeat(80),
+    });
+    const results = repo.searchConversations('targetword');
+    const hit = results.find((r) => r.nodeId === user.id);
+    expect(hit?.snippet).toContain('targetword');
+  });
+
+  it('escapes LIKE special characters in the query', () => {
+    const id = repo.createConversation({ title: '50% off sale' });
+    const results = repo.searchConversations('50%');
+    expect(results.some((r) => r.conversationId === id)).toBe(true);
+    // A bare % without escaping would match everything — ensure scoped.
+    const wild = repo.searchConversations('%');
+    // Only the conversation containing a literal '%' should match.
+    expect(wild.some((r) => r.conversationId === id)).toBe(true);
+  });
+});
+
 describe('Repo — directory scoping', () => {
   it('includes on-path attachments and excludes off-path ones', () => {
     const convId = repo.createConversation({});
