@@ -3,6 +3,8 @@
 A tree-structured, branching conversation client for the Claude CLI, built in **Electron + SQLite + React**.
 Fork from any message, navigate branches, and keep a recoverable tree of explorations.
 
+![Bonsai demo](docs/demo.gif)
+
 ## Architecture
 
 | Concern | Process | Where |
