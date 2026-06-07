@@ -45,6 +45,14 @@ function Sparkle() {
   );
 }
 
+/** Map a raw activity label to a human-readable string. */
+function formatActivityLabel(label: string): string {
+  if (label === 'thinking') return 'Thinking…';
+  if (label === 'EnterPlanMode') return 'Entering plan mode';
+  if (label === 'ExitPlanMode') return 'Exiting plan mode';
+  return `Using ${label}`;
+}
+
 export function MessageStream() {
   const store = useStore();
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -128,6 +136,7 @@ export function MessageStream() {
     const isUser = node.role === 'user';
     const isStreaming = node.status === 'streaming';
     const isError = node.status === 'error';
+    const activityLabel = isStreaming ? (store.streamActivity.get(node.id) ?? '') : '';
 
     return (
       <div
@@ -158,6 +167,14 @@ export function MessageStream() {
 
           {isError && node.error_text ? (
             <div className="error-text">{node.error_text}</div>
+          ) : null}
+
+          {/* Transient activity indicator: thinking / tool use. */}
+          {activityLabel ? (
+            <div className="stream-activity">
+              <span className="activity-dot" />
+              {formatActivityLabel(activityLabel)}
+            </div>
           ) : null}
 
           {/* Hover actions (component 8). */}

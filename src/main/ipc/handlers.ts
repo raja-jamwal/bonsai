@@ -433,6 +433,10 @@ function startTurn(deps: IpcDeps, spec: TurnSpec): void {
       onDelta: (text: string): void => {
         post({ type: 'delta', textDelta: text });
       },
+      // Transient activity indicator (thinking / tool use) -> renderer.
+      onActivity: (label: string, active: boolean): void => {
+        post({ type: 'activity', label, active });
+      },
       // Periodic crash-recovery checkpoint of partial content. Not sent
       // to the renderer — the renderer already has the deltas.
       onCheckpoint: (content: string): void => {

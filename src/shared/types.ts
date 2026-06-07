@@ -209,7 +209,18 @@ export interface ErrorEvent {
   message: string;
 }
 
-export type StreamEvent = DeltaEvent | DoneEvent | ErrorEvent;
+/**
+ * Transient activity indicator for the current streaming turn.
+ * `label` is the human-readable activity (e.g. 'thinking' or tool name like
+ * 'Bash', 'EnterPlanMode'). `active: false` signals the indicator should clear.
+ */
+export interface ActivityEvent {
+  type: 'activity';
+  label: string;
+  active: boolean;
+}
+
+export type StreamEvent = DeltaEvent | DoneEvent | ErrorEvent | ActivityEvent;
 
 // ---------------------------------------------------------------------------
 // IPC channel names — referenced by both processes to avoid string drift.

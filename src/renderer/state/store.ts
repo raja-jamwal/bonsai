@@ -54,6 +54,9 @@ interface StoreState {
   // data
   tree: ConversationTree | null;
   conversations: ConversationSummary[];
+  // Transient: maps assistantNodeId -> current activity label during streaming.
+  // Cleared when the activity ends or the turn finishes.
+  streamActivity: Map<string, string>;
 }
 
 // ---------------------------------------------------------------------------
@@ -118,6 +121,7 @@ let state: StoreState = {
   fork: null,
   tree: null,
   conversations: [],
+  streamActivity: new Map(),
 };
 
 const listeners = new Set<() => void>();
@@ -201,7 +205,17 @@ function subscribeToTurn(assistantNodeId: string): void {
           content: n.content + event.textDelta,
         }));
         break;
-      case 'done':
+      case 'activity': {
+        const next = new Map(state.streamActivity);
+        if (event.active && event.label) {
+          next.set(assistantNodeId, event.label);
+        } else {
+          next.delete(assistantNodeId);
+        }
+        setState({ streamActivity: next });
+        break;
+      }
+      case 'done': {
         patchNode(assistantNodeId, (n) => ({
           ...n,
           status: 'complete',
@@ -211,18 +225,32 @@ function subscribeToTurn(assistantNodeId: string): void {
           cost_usd: event.usage.costUsd,
           completed_at: Date.now(),
         }));
+        // Clear any lingering activity indicator.
+        if (state.streamActivity.has(assistantNodeId)) {
+          const next = new Map(state.streamActivity);
+          next.delete(assistantNodeId);
+          setState({ streamActivity: next });
+        }
         // Refresh authoritative tree + summaries from the DB after completion.
         void refreshTree();
         void refreshConversations();
         break;
-      case 'error':
+      }
+      case 'error': {
         patchNode(assistantNodeId, (n) => ({
           ...n,
           status: 'error',
           error_text: event.message,
           completed_at: Date.now(),
         }));
+        // Clear any lingering activity indicator.
+        if (state.streamActivity.has(assistantNodeId)) {
+          const next = new Map(state.streamActivity);
+          next.delete(assistantNodeId);
+          setState({ streamActivity: next });
+        }
         break;
+      }
     }
   });
 }
@@ -653,6 +681,7 @@ export function useStore() {
     tree: snap.tree,
     nodes,
     conversations: snap.conversations,
+    streamActivity: snap.streamActivity,
 
     // --- selectors ---
     activePath,

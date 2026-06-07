@@ -31,6 +31,8 @@ export interface RunCallbacks {
   onCheckpoint(content: string): void;
   onDone(r: TurnResult): void;
   onError(message: string): void;
+  /** Transient activity indicator. label='thinking'|toolName; active=false clears. */
+  onActivity(label: string, active: boolean): void;
 }
 
 // Persist accumulated partial content every N deltas for crash recovery.
@@ -131,6 +133,9 @@ export class ClaudeRunner {
     let resultEmitted = false; // did we see a terminal result event?
     let doneSent = false; // did we already invoke onDone?
     let stderrBuf = '';
+    // Track whether an activity indicator is currently showing so we only send
+    // the "clear" signal once per transition (not on every text delta).
+    let activityActive = false;
 
     // Guard so a turn reports a failure at most once.
     const fail = (message: string): void => {
@@ -144,6 +149,11 @@ export class ClaudeRunner {
       for (const e of emits) {
         switch (e.kind) {
           case 'delta': {
+            // Clear any active indicator (thinking/tool) once text starts flowing.
+            if (activityActive) {
+              activityActive = false;
+              cb.onActivity('', false);
+            }
             accumulated += e.text;
             cb.onDelta(e.text);
             // Periodic checkpoint of partial content for crash recovery.
@@ -151,6 +161,16 @@ export class ClaudeRunner {
               deltaCount = 0;
               cb.onCheckpoint(accumulated);
             }
+            break;
+          }
+          case 'tool_start': {
+            activityActive = true;
+            cb.onActivity(e.toolName, true);
+            break;
+          }
+          case 'thinking_start': {
+            activityActive = true;
+            cb.onActivity('thinking', true);
             break;
           }
           case 'result': {
