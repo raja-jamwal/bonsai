@@ -176,23 +176,37 @@ export function Composer() {
 
             {/* Ask split-button: primary action sends; the caret picks the mode. */}
             <div className="composer-ask-wrap">
+              {isStreaming ? (
+                <button
+                  type="button"
+                  className="composer-stop"
+                  title="Stop generation"
+                  onClick={() => leaf && void window.bridge.abortTurn({ nodeId: leaf.id })}
+                >
+                  <Icon name="square" size={11} strokeWidth={2.5} />
+                  Stop
+                </button>
+              ) : (
               <button
                 type="button"
                 className={`composer-ask${mode === 'act' ? ' act' : ''}`}
                 onClick={() => void submit()}
-                disabled={isStreaming || text.trim().length === 0}
+                disabled={text.trim().length === 0}
               >
                 <Icon name={mode === 'act' ? 'chevrons-right' : 'hand'} size={13} />
                 {mode === 'act' ? 'Act' : 'Ask'}
               </button>
-              <button
-                type="button"
-                className={`composer-ask-caret${mode === 'act' ? ' act' : ''}`}
-                title="Permission mode"
-                onClick={() => setAskOpen((v) => !v)}
-              >
-                <Icon name="chevron-down" size={12} />
-              </button>
+              )}
+              {!isStreaming ? (
+                <button
+                  type="button"
+                  className={`composer-ask-caret${mode === 'act' ? ' act' : ''}`}
+                  title="Permission mode"
+                  onClick={() => setAskOpen((v) => !v)}
+                >
+                  <Icon name="chevron-down" size={12} />
+                </button>
+              ) : null}
               {askOpen ? (
                 <div className="crumb-menu ask-menu">
                   <button

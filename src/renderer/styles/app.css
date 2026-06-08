@@ -1141,6 +1141,24 @@
   opacity: 0.45;
   cursor: default;
 }
+.composer-stop {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border-radius: var(--r-pill);
+  background: var(--bg);
+  color: var(--fg);
+  font-size: var(--fs-ui);
+  font-weight: 500;
+  border: 1px solid var(--border);
+  transition: background var(--t-fast) ease, color var(--t-fast) ease;
+}
+.composer-stop:hover {
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #fca5a5;
+}
 /* model selector right-aligned. */
 .composer-model {
   display: inline-flex;
