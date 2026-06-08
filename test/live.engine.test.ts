@@ -55,6 +55,7 @@ live('LIVE engine round-trip (real claude CLI)', () => {
           onDelta: (t) => {
             streamed += t;
           },
+          onActivity: () => {},
           onCheckpoint: (c) => repo.checkpointAssistant(asst.id, c),
           onDone: (r) => resolveDone(r),
           onError: (m) => reject(new Error(m)),
@@ -106,6 +107,7 @@ live('LIVE engine round-trip (real claude CLI)', () => {
         { nodeId: asst2.id, cwd: tmpdir(), addDirs: [], model: 'haiku', thread: thread2 },
         {
           onDelta: () => {},
+          onActivity: () => {},
           onCheckpoint: () => {},
           onDone: (r) => resolveDone(r),
           onError: (m) => reject(new Error(m)),
