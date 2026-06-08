@@ -9,6 +9,12 @@ import './styles/tokens.css';
 import './styles/app.css';
 
 import { App } from './App';
+import { getState } from './state/store';
+
+// Expose store snapshot in DevTools: window.__store()
+if (process.env.NODE_ENV !== 'production') {
+  (window as unknown as Record<string, unknown>).__store = getState;
+}
 
 const rootEl = document.getElementById('root');
 if (!rootEl) {

@@ -77,57 +77,23 @@ export function MessageStream() {
   }
 
   /**
-   * Inline fork-point marker — rendered AFTER the assistant ANSWER the fork
-   * happened at (where the user clicked), not after the question. Two cases of
-   * "an alternative exists at this answer":
-   *   • off-path CHILDREN of this answer — other continuations after it
-   *     (forking a mid-conversation answer).
-   *   • off-path SIBLINGS of this answer — other answers to the same question
-   *     (a leaf fork keeps the original answer as a sibling, or a regenerate).
-   * We only mark assistant nodes so the marker sits under the answer.
+   * Inline fork-point marker — a purely informational dashed divider rendered
+   * AFTER an assistant answer where the conversation diverges, labelling how many
+   * branches split off there. The count is a tree property (store.branchesAt), so
+   * it reads the same from any branch. Navigation lives in the left branch tree;
+   * starting a new branch uses the answer's own "Fork from here" hover action, so
+   * the marker carries no button. We only mark assistant nodes.
    */
   function renderForkMarker(node: MessageNode): React.ReactNode {
     if (node.role !== 'assistant') return null;
-    const offChildren = store.childrenOf(node.id).filter((c) => !store.isOnPath(c.id));
-    const offSiblings = store
-      .siblingsOf(node.id)
-      .filter((s) => s.id !== node.id && !store.isOnPath(s.id));
-    const alts = [...offChildren, ...offSiblings];
-    if (alts.length === 0) return null;
-    const target = alts[0];
-
-    // Descend the alternative to its first-child leaf, then switch to it.
-    function switchToAlt(): void {
-      let cur = target;
-      const seen = new Set<string>([cur.id]);
-      let kids = store.childrenOf(cur.id);
-      while (kids.length > 0 && !seen.has(kids[0].id)) {
-        cur = kids[0];
-        seen.add(cur.id);
-        kids = store.childrenOf(cur.id);
-      }
-      void store.switchLeaf(cur.id);
-    }
-
-    // Label the alternative branch (prefer its first user message / title).
-    const labelNode =
-      target.role === 'user'
-        ? target
-        : store.childrenOf(target.id).find((c) => c.role === 'user') ?? target;
-    const label =
-      (labelNode.title && labelNode.title.trim()) ||
-      labelNode.content.trim().replace(/\s+/g, ' ').slice(0, 28) ||
-      'branch';
+    const totalBranches = store.branchesAt(node.id);
+    if (totalBranches < 2) return null;
 
     return (
-      <div className="fork-marker" key={`fork-${node.id}`}>
-        <span className="fork-chip">
-          🌿 Fork point · {alts.length}{' '}
-          {alts.length === 1 ? 'sibling' : 'siblings'}
+      <div className={'fork-marker'} key={'fork-' + node.id}>
+        <span className={'fork-chip'}>
+          🌿 Fork point · {totalBranches} branches
         </span>
-        <button type="button" className="fork-switch" onClick={switchToAlt}>
-          Switch → “{label}”
-        </button>
       </div>
     );
   }

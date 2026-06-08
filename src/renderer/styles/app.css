@@ -914,22 +914,6 @@
   font-weight: 500;
   white-space: nowrap;
 }
-.fork-marker .fork-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 10px;
-  border: 1px solid var(--brand-tint-2);
-  background: var(--bg);
-  border-radius: var(--r-pill);
-  color: var(--fork-ink);
-  font-weight: 500;
-  white-space: nowrap;
-  transition: background var(--t-fast) ease;
-}
-.fork-marker .fork-switch:hover {
-  background: var(--brand-tint);
-}
 
 /* Draft-branch affordance shown after the stream when "Fork from here" is armed. */
 .draft-fork {

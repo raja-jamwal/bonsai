@@ -181,7 +181,7 @@ export function Composer() {
                   type="button"
                   className="composer-stop"
                   title="Stop generation"
-                  onClick={() => leaf && void window.bridge.abortTurn({ nodeId: leaf.id })}
+                  onClick={() => leaf && void store.abortTurn(leaf.id)}
                 >
                   <Icon name="square" size={11} strokeWidth={2.5} />
                   Stop

@@ -147,6 +147,11 @@ function getSnapshot(): StoreState {
   return state;
 }
 
+/** Debug: returns the current raw store state. Exposed as window.__store() in dev. */
+export function getState(): StoreState {
+  return state;
+}
+
 // ---------------------------------------------------------------------------
 // Tree helpers (operate on a node array). Pure functions so selectors below and
 // streaming integration can reuse them.
@@ -177,6 +182,26 @@ function childrenOfRaw(nodes: MessageNode[], parentId: string | null): MessageNo
   return nodes
     .filter((n) => n.parent_id === parentId)
     .sort((a, b) => a.created_at - b.created_at);
+}
+
+/**
+ * How many branches diverge AT an assistant answer — a property of the tree, not
+ * of the current view (so it never changes just because you switched branches or
+ * stepped back onto the fork itself). Two divergence shapes:
+ *   • continuation fork: the answer has >1 follow-up child  -> that child count.
+ *   • answer fork (regenerate / leaf-fork): the answer has sibling answers under
+ *     the same question -> this answer + its siblings.
+ * Returns 0 when the node isn't a divergence point. The two shapes don't co-occur
+ * in normal flows; continuation takes precedence.
+ */
+function branchesAtRaw(nodes: MessageNode[], nodeId: string): number {
+  const node = nodes.find((n) => n.id === nodeId);
+  if (!node) return 0;
+  const children = childrenOfRaw(nodes, nodeId);
+  if (children.length > 1) return children.length;
+  const siblings = childrenOfRaw(nodes, node.parent_id).filter((s) => s.id !== nodeId);
+  if (siblings.length > 0) return siblings.length + 1;
+  return 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -528,6 +553,16 @@ function cancelFork(): void {
   setState({ fork: null, activeLeafId: restore });
 }
 
+/**
+ * Abort the in-flight turn for a streaming node ("Stop"). The main process kills
+ * the child (SIGTERM→SIGKILL) and keeps whatever partial content was produced,
+ * marking the node complete; we refresh to pick up that final state.
+ */
+async function abortTurn(nodeId: string): Promise<void> {
+  await api.abortTurn({ nodeId });
+  await refreshTree();
+}
+
 /** Delete a node and its subtree (cascade). Confirmation is the UI's job. */
 async function deleteNode(nodeId: string): Promise<void> {
   await api.deleteNode({ nodeId });
@@ -662,6 +697,9 @@ export function useStore() {
   const forkPoints = (): MessageNode[] =>
     activePath().filter((n) => childrenOfRaw(nodes, n.id).length > 1);
 
+  // Total branches diverging at a node (tree property, view-independent).
+  const branchesAt = (nodeId: string): number => branchesAtRaw(nodes, nodeId);
+
   // Folders effective on the current branch: conversation-level (node_id null)
   // plus any attached to a node on the active path (ancestor-or-self).
   const branchFolders = (): Attachment[] => {
@@ -689,6 +727,7 @@ export function useStore() {
     siblingsOf,
     isOnPath,
     forkPoints,
+    branchesAt,
     branchFolders,
 
     // --- actions ---
@@ -704,6 +743,7 @@ export function useStore() {
     editUser,
     forkFrom,
     cancelFork,
+    abortTurn,
     deleteNode,
     deleteConversation,
     renameConversation,
@@ -714,3 +754,22 @@ export function useStore() {
     setPermissionMode,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Test-only handle: lets tests drive the real store actions without a React
+// render (the actions are otherwise reachable only through useStore()). Not
+// imported by any production code path. See test/fork-e2e.test.ts.
+// ---------------------------------------------------------------------------
+export const __test = {
+  getState,
+  openConversation,
+  sendTurn,
+  regenerate,
+  editUser,
+  forkFrom,
+  cancelFork,
+  switchLeaf,
+  deleteNode,
+  abortTurn,
+  branchesAt: (nodeId: string): number => branchesAtRaw(state.tree?.nodes ?? [], nodeId),
+};

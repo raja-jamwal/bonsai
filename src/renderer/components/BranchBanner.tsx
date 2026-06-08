@@ -38,10 +38,9 @@ export function BranchBanner() {
   if (forkIdxs.length === 0) return null;
 
   const lastFork = forkIdxs[forkIdxs.length - 1];
-  const prevFork = forkIdxs.length > 1 ? forkIdxs[forkIdxs.length - 2] : -1;
-  // Branch heads are the first node AFTER a fork (root for the first segment).
+  // The node where the path actually diverges (the last shared ancestor).
+  const forkNode = path[lastFork];
   const currentHead = path[lastFork + 1];
-  const parentHead = path[prevFork + 1] ?? path[0];
 
   return (
     <div className="branch-banner">
@@ -53,7 +52,7 @@ export function BranchBanner() {
         {forkIdxs.length}
       </span>
       <span className="banner-meta">
-        forked from {shortLabel(parentHead, 'parent')}
+        branched after {shortLabel(forkNode, 'fork point')}
       </span>
     </div>
   );
