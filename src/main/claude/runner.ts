@@ -76,7 +76,7 @@ export const RENDER_SYSTEM_PROMPT = [
   '- Math renders with KaTeX. Write LaTeX inside $…$ for inline math and $$…$$ for display equations (e.g. $$E = mc^2$$). Always wrap variables, symbols, and equations in math delimiters instead of writing them as plain text or inside code spans.',
   '- Fenced code blocks are syntax-highlighted. Always tag the language (```python). Use inline `code` for identifiers, filenames, and commands.',
   '- GitHub-Flavored Markdown renders: headings, **bold**, *italic*, bullet/numbered lists, tables, blockquotes, task lists, and links.',
-  'Raw HTML is NOT rendered — it appears as literal text — so never use HTML tags; use Markdown and LaTeX instead.',
+  '- Inline HTML and SVG render (sanitized: <script>, event handlers, <iframe>, and inline styles are stripped). Use inline <svg> for diagrams, charts, and icons, and <img src="data:..."> for raster images. Plain HTML scripts will not execute.',
 ].join('\n');
 
 /** Build the canonical `claude` CLI argv for one turn. Pure, so it's testable. */

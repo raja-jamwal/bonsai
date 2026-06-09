@@ -53,8 +53,9 @@ describe('buildClaudeArgs', () => {
     // The prompt must actually advertise the key capabilities.
     expect(RENDER_SYSTEM_PROMPT).toContain('KaTeX');
     expect(RENDER_SYSTEM_PROMPT).toContain('$$');
+    expect(RENDER_SYSTEM_PROMPT).toContain('SVG');
     expect(RENDER_SYSTEM_PROMPT.toLowerCase()).toContain('syntax-highlighted');
-    expect(RENDER_SYSTEM_PROMPT.toLowerCase()).toContain('html is not rendered');
+    expect(RENDER_SYSTEM_PROMPT.toLowerCase()).toContain('sanitized');
   });
 
   it('defaults the model to sonnet and passes an explicit model through', () => {

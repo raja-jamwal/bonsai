@@ -863,6 +863,19 @@
   padding: 0;
 }
 
+/* Inline images / SVG (sanitized) — constrain to the bubble so a large asset
+   can't blow out the layout or overlay the app. */
+.bubble .md img,
+.bubble .md svg {
+  max-width: 100%;
+  height: auto;
+}
+.bubble .md img {
+  border-radius: 8px;
+  display: block;
+  margin: 0.3em 0;
+}
+
 /* KaTeX sizing — inline a touch larger; display math centered + scrollable. */
 .bubble .md .katex {
   font-size: 1.04em;
