@@ -13,7 +13,7 @@
 //                   no forks, in which case it is also the "current" chip.
 //   • fork chips  — one per fork point on the path (crumb.fork, coral tint). Each
 //                   has a caret dropdown to switch sibling branches at that fork,
-//                   "Continue parent", and "Fork a new branch here".
+//                   plus "Fork a new branch here".
 //   • current     — the last chip (solid coral, crumb.current) gets a rename +
 //                   "fork from here" menu.
 //   • collapsed   — when there are > 4 forks, the middle ones collapse to a
@@ -169,18 +169,6 @@ export function Breadcrumb() {
         </button>
         {open ? (
           <div className="crumb-menu">
-            <button
-              type="button"
-              className="crumb-menu-item"
-              onClick={() => {
-                void store.switchLeaf(node.id);
-                store.setOpenDropdown(null);
-              }}
-            >
-              <Icon name="corner-down-right" size={14} />
-              Continue parent
-            </button>
-            <div className="crumb-menu-sep" />
             {childForks.map((c) => (
               <button
                 key={c.id}
@@ -261,7 +249,7 @@ export function Breadcrumb() {
 
   // ----- Drill-forward chip (the "›" that opens the next level's children) ----
   // Shown only when the active leaf has children — i.e. you're parked mid-tree
-  // (after "Continue parent" / stepping onto a fork) and can descend into a
+  // (after arming a new fork / stepping onto a fork node) and can descend into a
   // branch without leaving the strip. Mirrors IntelliJ's path-segment drill-down.
   function drillChip(): React.ReactNode {
     const kids = store.childrenOf(leaf.id);
