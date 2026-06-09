@@ -64,6 +64,43 @@ export function buildPromptFromThread(thread: ThreadMessage[]): string {
   );
 }
 
+/**
+ * Appended to Claude's default system prompt (via --append-system-prompt) so
+ * replies use what the message renderer can actually display. The renderer is
+ * react-markdown v9 + remark-gfm + remark-math/KaTeX + rehype-highlight, and it
+ * does NOT render raw HTML (see Markdown.tsx). Keeping this in sync with that
+ * component is what turns "equations shown as plain text" into real math.
+ */
+export const RENDER_SYSTEM_PROMPT = [
+  'Your replies are shown in a desktop chat UI that renders GitHub-Flavored Markdown. Use these display capabilities:',
+  '- Math renders with KaTeX. Write LaTeX inside $…$ for inline math and $$…$$ for display equations (e.g. $$E = mc^2$$). Always wrap variables, symbols, and equations in math delimiters instead of writing them as plain text or inside code spans.',
+  '- Fenced code blocks are syntax-highlighted. Always tag the language (```python). Use inline `code` for identifiers, filenames, and commands.',
+  '- GitHub-Flavored Markdown renders: headings, **bold**, *italic*, bullet/numbered lists, tables, blockquotes, task lists, and links.',
+  'Raw HTML is NOT rendered — it appears as literal text — so never use HTML tags; use Markdown and LaTeX instead.',
+].join('\n');
+
+/** Build the canonical `claude` CLI argv for one turn. Pure, so it's testable. */
+export function buildClaudeArgs(opts: RunOptions): string[] {
+  const model = opts.model && opts.model.length > 0 ? opts.model : 'sonnet';
+  return [
+    '-p',
+    '--input-format',
+    'stream-json',
+    '--output-format',
+    'stream-json',
+    '--verbose', // required for full stream-json output
+    '--include-partial-messages', // token-level deltas
+    '--no-session-persistence', // we own history; don't write session JSONL
+    '--model',
+    model,
+    '--append-system-prompt',
+    RENDER_SYSTEM_PROMPT, // advertise the renderer's display capabilities
+    ...opts.addDirs.flatMap((d) => ['--add-dir', d]),
+    // 'Act without asking' — let Claude use tools without pausing for approval.
+    ...(opts.skipPermissions ? ['--dangerously-skip-permissions'] : []),
+  ];
+}
+
 // Grace period between SIGTERM and SIGKILL on abort.
 const SIGKILL_TIMEOUT_MS = 3000;
 
@@ -95,22 +132,7 @@ export class ClaudeRunner {
   start(opts: RunOptions, cb: RunCallbacks): void {
     // Canonical invocation. The PRIMARY dir is the process cwd; only the
     // REMAINDER are passed via --add-dir (the IPC layer pre-splits cwd/addDirs).
-    const model = opts.model && opts.model.length > 0 ? opts.model : 'sonnet';
-    const args = [
-      '-p',
-      '--input-format',
-      'stream-json',
-      '--output-format',
-      'stream-json',
-      '--verbose', // required for full stream-json output
-      '--include-partial-messages', // token-level deltas
-      '--no-session-persistence', // we own history; don't write session JSONL
-      '--model',
-      model,
-      ...opts.addDirs.flatMap((d) => ['--add-dir', d]),
-      // 'Act without asking' — let Claude use tools without pausing for approval.
-      ...(opts.skipPermissions ? ['--dangerously-skip-permissions'] : []),
-    ];
+    const args = buildClaudeArgs(opts);
 
     let child: ChildProcessWithoutNullStreams;
     try {

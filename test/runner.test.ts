@@ -3,7 +3,13 @@
 // every user turn and ignores injected assistant content). Pure function; no
 // subprocess is spawned.
 import { describe, it, expect } from 'vitest';
-import { buildPromptFromThread, type ThreadMessage } from '../src/main/claude/runner';
+import {
+  buildPromptFromThread,
+  buildClaudeArgs,
+  RENDER_SYSTEM_PROMPT,
+  type ThreadMessage,
+  type RunOptions,
+} from '../src/main/claude/runner';
 
 describe('buildPromptFromThread', () => {
   it('sends a single root user turn verbatim (no transcript wrapper)', () => {
@@ -28,5 +34,42 @@ describe('buildPromptFromThread', () => {
 
   it('handles an empty thread', () => {
     expect(buildPromptFromThread([])).toBe('');
+  });
+});
+
+describe('buildClaudeArgs', () => {
+  const base: RunOptions = {
+    nodeId: 'n1',
+    cwd: '/tmp',
+    addDirs: [],
+    thread: [{ role: 'user', content: 'hi' }],
+  };
+
+  it('appends the render-capabilities system prompt (so math/code/markdown render)', () => {
+    const args = buildClaudeArgs(base);
+    const i = args.indexOf('--append-system-prompt');
+    expect(i).toBeGreaterThanOrEqual(0);
+    expect(args[i + 1]).toBe(RENDER_SYSTEM_PROMPT);
+    // The prompt must actually advertise the key capabilities.
+    expect(RENDER_SYSTEM_PROMPT).toContain('KaTeX');
+    expect(RENDER_SYSTEM_PROMPT).toContain('$$');
+    expect(RENDER_SYSTEM_PROMPT.toLowerCase()).toContain('syntax-highlighted');
+    expect(RENDER_SYSTEM_PROMPT.toLowerCase()).toContain('html is not rendered');
+  });
+
+  it('defaults the model to sonnet and passes an explicit model through', () => {
+    const m = (args: string[]) => args[args.indexOf('--model') + 1];
+    expect(m(buildClaudeArgs(base))).toBe('sonnet');
+    expect(m(buildClaudeArgs({ ...base, model: 'opus' }))).toBe('opus');
+  });
+
+  it('passes each attached dir via --add-dir and adds skip-permissions only when asked', () => {
+    const args = buildClaudeArgs({ ...base, addDirs: ['/a', '/b'], skipPermissions: true });
+    expect(args.filter((a) => a === '--add-dir')).toHaveLength(2);
+    expect(args).toContain('/a');
+    expect(args).toContain('/b');
+    expect(args).toContain('--dangerously-skip-permissions');
+    // Default: no skip-permissions flag.
+    expect(buildClaudeArgs(base)).not.toContain('--dangerously-skip-permissions');
   });
 });
