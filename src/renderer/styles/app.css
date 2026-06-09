@@ -876,6 +876,103 @@
   margin: 0.3em 0;
 }
 
+/* ---- Interactive artifact card (sandboxed iframe host) ------------------- */
+.artifact {
+  margin: 0.6em 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg);
+}
+.artifact-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 6px 12px;
+  background: var(--rail-bg);
+  border-bottom: 1px solid var(--border);
+}
+.artifact-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.artifact-head .spacer {
+  flex: 1;
+}
+.artifact-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  border-radius: 7px;
+  font-size: 12px;
+  color: var(--fg);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  transition: background var(--t-fast) ease;
+}
+.artifact-btn:hover {
+  background: var(--hover);
+}
+.artifact-btn.run {
+  background: var(--brand);
+  color: #fff;
+  border-color: var(--brand);
+}
+.artifact-btn.run:hover {
+  opacity: 0.92;
+}
+.artifact-code {
+  margin: 0;
+  padding: 12px 14px;
+  max-height: 320px;
+  overflow: auto;
+  background: var(--rail-bg);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.55;
+  white-space: pre;
+}
+.artifact-frame-wrap {
+  position: relative;
+}
+.artifact-frame {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: #fff;
+}
+.artifact-error-banner {
+  padding: 8px 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: #b00020;
+  background: #fdecef;
+  border-top: 1px solid #f5c2cb;
+  white-space: pre-wrap;
+}
+.artifact-run-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  padding: 22px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fork-ink);
+  background: var(--brand-tint);
+  transition: background var(--t-fast) ease;
+}
+.artifact-run-cta:hover {
+  background: var(--brand-tint-2);
+}
+
 /* KaTeX sizing — inline a touch larger; display math centered + scrollable. */
 .bubble .md .katex {
   font-size: 1.04em;

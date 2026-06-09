@@ -54,6 +54,8 @@ describe('buildClaudeArgs', () => {
     expect(RENDER_SYSTEM_PROMPT).toContain('KaTeX');
     expect(RENDER_SYSTEM_PROMPT).toContain('$$');
     expect(RENDER_SYSTEM_PROMPT).toContain('SVG');
+    expect(RENDER_SYSTEM_PROMPT).toContain('react-app');
+    expect(RENDER_SYSTEM_PROMPT).toContain('html-app');
     expect(RENDER_SYSTEM_PROMPT.toLowerCase()).toContain('syntax-highlighted');
     expect(RENDER_SYSTEM_PROMPT.toLowerCase()).toContain('sanitized');
   });

@@ -33,7 +33,12 @@ export default defineConfig({
     root: resolve(__dirname, 'src/renderer'),
     build: {
       rollupOptions: {
-        input: { index: resolve(__dirname, 'src/renderer/index.html') },
+        input: {
+          index: resolve(__dirname, 'src/renderer/index.html'),
+          // Isolated host document for interactive artifacts (loaded in a
+          // sandboxed iframe, same origin so the app CSP's frame-src 'self' allows it).
+          artifact: resolve(__dirname, 'src/renderer/artifact.html'),
+        },
       },
     },
     resolve: {

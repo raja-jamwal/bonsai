@@ -24,6 +24,8 @@ import rehypeHighlight from 'rehype-highlight';
 import 'katex/dist/katex.min.css';
 import 'highlight.js/styles/github.css';
 import { markdownSanitizeSchema } from './markdownSanitizeSchema';
+import { splitMessage } from './artifactParse';
+import { Artifact } from './Artifact';
 
 const REMARK = [remarkGfm, remarkMath];
 const REHYPE = [
@@ -61,7 +63,8 @@ function normalizeMath(src: string): string {
     .join('');
 }
 
-export function Markdown({ text }: { text: string }) {
+/** Markdown prose (GFM + KaTeX + highlighting + sanitized inline HTML/SVG). */
+function MarkdownProse({ text }: { text: string }) {
   return (
     <div className="md">
       <ReactMarkdown
@@ -75,5 +78,28 @@ export function Markdown({ text }: { text: string }) {
         {normalizeMath(text)}
       </ReactMarkdown>
     </div>
+  );
+}
+
+/**
+ * Render a message body: prose segments via Markdown, and interactive
+ * ```react-app / ```html-app fences via the isolated <iframe> artifact host.
+ * splitMessage keeps the common (no-artifact) case a single prose segment.
+ */
+export function Markdown({ text }: { text: string }) {
+  const segments = splitMessage(text);
+  if (segments.length === 1 && segments[0].type === 'markdown') {
+    return <MarkdownProse text={segments[0].text} />;
+  }
+  return (
+    <>
+      {segments.map((seg, i) =>
+        seg.type === 'markdown' ? (
+          <MarkdownProse key={i} text={seg.text} />
+        ) : (
+          <Artifact key={i} kind={seg.kind} code={seg.code} />
+        )
+      )}
+    </>
   );
 }

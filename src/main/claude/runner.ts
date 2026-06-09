@@ -77,6 +77,7 @@ export const RENDER_SYSTEM_PROMPT = [
   '- Fenced code blocks are syntax-highlighted. Always tag the language (```python). Use inline `code` for identifiers, filenames, and commands.',
   '- GitHub-Flavored Markdown renders: headings, **bold**, *italic*, bullet/numbered lists, tables, blockquotes, task lists, and links.',
   '- Inline HTML and SVG render (sanitized: <script>, event handlers, <iframe>, and inline styles are stripped). Use inline <svg> for diagrams, charts, and icons, and <img src="data:..."> for raster images. Plain HTML scripts will not execute.',
+  '- For INTERACTIVE demos you can emit a runnable artifact as a fenced block whose language is `react-app` (a small React component — `export default` it; only "react" and "react-dom" are importable, no other packages or network) or `html-app` (a self-contained HTML document with inline CSS/JS). Artifacts run sandboxed with no network, storage, or file access, and the user runs them on demand. Use them only when interactivity genuinely helps; for code meant to be READ, use an ordinary fenced code block instead.',
 ].join('\n');
 
 /** Build the canonical `claude` CLI argv for one turn. Pure, so it's testable. */
