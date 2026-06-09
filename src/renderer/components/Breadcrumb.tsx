@@ -77,17 +77,9 @@ export function Breadcrumb() {
     store.setOpenDropdown(openDropdownId === id ? null : id);
   }
 
-  // Switch to the deepest-first-child leaf rooted at `node`.
+  // Switch to the head leaf of the branch rooted at `node` (folder-nav "open").
   function switchToBranch(node: MessageNode): void {
-    let cur = node;
-    const seen = new Set<string>([cur.id]);
-    let kids = store.childrenOf(cur.id);
-    while (kids.length > 0 && !seen.has(kids[0].id)) {
-      cur = kids[0];
-      seen.add(cur.id);
-      kids = store.childrenOf(cur.id);
-    }
-    void store.switchLeaf(cur.id);
+    void store.switchLeaf(store.deepestLeaf(node.id));
   }
 
   function renameCurrent(): void {
@@ -267,12 +259,65 @@ export function Breadcrumb() {
     );
   }
 
+  // ----- Drill-forward chip (the "›" that opens the next level's children) ----
+  // Shown only when the active leaf has children — i.e. you're parked mid-tree
+  // (after "Continue parent" / stepping onto a fork) and can descend into a
+  // branch without leaving the strip. Mirrors IntelliJ's path-segment drill-down.
+  function drillChip(): React.ReactNode {
+    const kids = store.childrenOf(leaf.id);
+    if (kids.length === 0) return null;
+    const ddId = 'crumb:drill';
+    const open = openDropdownId === ddId;
+    return (
+      <span className="crumb-wrap" key="drill">
+        <span className="crumb-sep">›</span>
+        <div className="crumb-dropdown">
+          <button
+            type="button"
+            className="crumb drill"
+            onClick={() => toggle(ddId)}
+            title="Continue into a branch from here"
+          >
+            <Icon name="chevron-right" size={14} />
+            <span className="crumb-caret">
+              <Icon name="chevron-down" size={12} />
+            </span>
+          </button>
+          {open ? (
+            <div className="crumb-menu">
+              {kids.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  className="crumb-menu-item"
+                  onClick={() => {
+                    switchToBranch(c);
+                    store.setOpenDropdown(null);
+                  }}
+                >
+                  <Icon name="git-branch" size={14} />
+                  {chipLabel(c, 'Branch')}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </span>
+    );
+  }
+
   const sep = <span className="crumb-sep">›</span>;
 
   // No forks → single conversation chip (current). This is the linear case and
-  // the key fix: a plain chat shows ONE chip, not one per message.
+  // the key fix: a plain chat shows ONE chip, not one per message. A drill chip
+  // appears only if you've parked mid-tree (leaf has children).
   if (forks.length === 0) {
-    return <div className="crumbs">{rootChip(true)}</div>;
+    return (
+      <div className="crumbs">
+        {rootChip(true)}
+        {drillChip()}
+      </div>
+    );
   }
 
   // With forks: root › fork › … › fork(current). Collapse middle when > 4.
@@ -300,6 +345,7 @@ export function Breadcrumb() {
     <div className="crumbs">
       {rootChip(false)}
       {forkChips}
+      {drillChip()}
     </div>
   );
 }

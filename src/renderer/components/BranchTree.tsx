@@ -55,20 +55,8 @@ export function BranchTree() {
     return isFork ? 'git-branch' : 'circle';
   }
 
-  function deepestLeaf(node: MessageNode): MessageNode {
-    let cur = node;
-    const seen = new Set<string>([cur.id]);
-    let kids = childrenOf(cur.id);
-    while (kids.length > 0 && !seen.has(kids[0].id)) {
-      cur = kids[0];
-      seen.add(cur.id);
-      kids = childrenOf(cur.id);
-    }
-    return cur;
-  }
-
   function switchToBranch(head: MessageNode): void {
-    void store.switchLeaf(deepestLeaf(head).id);
+    void store.switchLeaf(store.deepestLeaf(head.id));
   }
 
   /** A "+ N replies" stub for the linear messages inside a segment. */

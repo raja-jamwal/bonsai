@@ -537,6 +537,18 @@
   color: #ffffff;
 }
 
+/* drill: the forward "›" chip that opens the next level's children. Neutral, so
+   it reads as a navigation affordance rather than a branch you're on. */
+.crumb.drill {
+  padding: 5px 7px;
+  color: var(--muted);
+}
+.crumb.drill:hover {
+  background: var(--bg);
+  border-color: var(--border-subtle);
+  color: var(--fg);
+}
+
 /* Caret on a fork/current chip (dropdown trigger). */
 .crumb .crumb-caret {
   display: inline-flex;

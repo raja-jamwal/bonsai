@@ -342,6 +342,22 @@ describe('Fork e2e — every message is forkable', () => {
     expect(store.branchesAt(byContent('reply:C').id)).toBe(0);
   });
 
+  it('deepestLeaf descends the first child to the branch head (breadcrumb drill target)', async () => {
+    await store.sendTurn('hello');
+    await tick();
+    const fork = byContent('reply:hello');
+    await store.sendTurn('b1'); // first child branch
+    await tick();
+    store.forkFrom(fork.id);
+    await store.sendTurn('b2'); // second child branch
+    await tick();
+
+    // From the fork node, follow the FIRST child (b1, created first) to its leaf.
+    expect(store.deepestLeaf(fork.id)).toBe(byContent('reply:b1').id);
+    // From an actual leaf, it's the leaf itself.
+    expect(store.deepestLeaf(byContent('reply:b2').id)).toBe(byContent('reply:b2').id);
+  });
+
   it('Stop reaches the bridge with the streaming node id (regression: window.bridge was undefined)', async () => {
     await seedTwoTurns();
     const leaf = byContent('reply:C'); // the latest assistant (what Composer aborts)

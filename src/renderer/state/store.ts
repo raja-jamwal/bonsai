@@ -532,9 +532,13 @@ function forkFrom(nodeId: string): void {
 }
 
 /** Deepest descendant of `id` by always following the first child. */
-function deepestDescendant(id: string | null): string | null {
-  if (!id || !state.tree) return id;
-  const nodes = state.tree.nodes;
+/**
+ * Descend from `id` to the leaf of its branch by always following the first
+ * child — the canonical "head of this branch" leaf. Pure so the breadcrumb /
+ * tree navigators and cancelFork can all share one definition.
+ */
+function deepestLeafRaw(nodes: MessageNode[], id: string | null): string | null {
+  if (!id) return id;
   let cur = id;
   const seen = new Set<string>([cur]);
   let kids = childrenOfRaw(nodes, cur);
@@ -544,6 +548,11 @@ function deepestDescendant(id: string | null): string | null {
     kids = childrenOfRaw(nodes, cur);
   }
   return cur;
+}
+
+function deepestDescendant(id: string | null): string | null {
+  if (!id || !state.tree) return id;
+  return deepestLeafRaw(state.tree.nodes, id);
 }
 
 /** Abandon a draft branch and return to the branch we forked from. */
@@ -700,6 +709,9 @@ export function useStore() {
   // Total branches diverging at a node (tree property, view-independent).
   const branchesAt = (nodeId: string): number => branchesAtRaw(nodes, nodeId);
 
+  // Leaf at the head of the branch rooted at a node (follow first child down).
+  const deepestLeaf = (nodeId: string): string => deepestLeafRaw(nodes, nodeId) ?? nodeId;
+
   // Folders effective on the current branch: conversation-level (node_id null)
   // plus any attached to a node on the active path (ancestor-or-self).
   const branchFolders = (): Attachment[] => {
@@ -728,6 +740,7 @@ export function useStore() {
     isOnPath,
     forkPoints,
     branchesAt,
+    deepestLeaf,
     branchFolders,
 
     // --- actions ---
@@ -772,4 +785,6 @@ export const __test = {
   deleteNode,
   abortTurn,
   branchesAt: (nodeId: string): number => branchesAtRaw(state.tree?.nodes ?? [], nodeId),
+  deepestLeaf: (nodeId: string): string =>
+    deepestLeafRaw(state.tree?.nodes ?? [], nodeId) ?? nodeId,
 };
