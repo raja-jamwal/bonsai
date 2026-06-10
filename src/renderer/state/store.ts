@@ -550,6 +550,28 @@ function deepestLeafRaw(nodes: MessageNode[], id: string | null): string | null 
   return cur;
 }
 
+/**
+ * End of the branch (segment) rooted at `id`: follow single-child links until the
+ * next fork or a leaf. This is the "go to THIS branch" target for folder-style
+ * navigation — clicking a branch parks at its own fork point (showing its
+ * messages and the branches that diverge) rather than diving past the fork into a
+ * descendant. For a linear branch this equals its leaf, so leaf-branch navigation
+ * is unchanged; only ancestor/fork branches differ from deepestLeafRaw, which
+ * would otherwise descend past the fork and land back on the current leaf.
+ */
+function branchEndRaw(nodes: MessageNode[], id: string | null): string | null {
+  if (!id) return id;
+  let cur = id;
+  const seen = new Set<string>([cur]);
+  let kids = childrenOfRaw(nodes, cur);
+  while (kids.length === 1 && !seen.has(kids[0].id)) {
+    cur = kids[0].id;
+    seen.add(cur);
+    kids = childrenOfRaw(nodes, cur);
+  }
+  return cur;
+}
+
 function deepestDescendant(id: string | null): string | null {
   if (!id || !state.tree) return id;
   return deepestLeafRaw(state.tree.nodes, id);
@@ -712,6 +734,10 @@ export function useStore() {
   // Leaf at the head of the branch rooted at a node (follow first child down).
   const deepestLeaf = (nodeId: string): string => deepestLeafRaw(nodes, nodeId) ?? nodeId;
 
+  // End of the branch rooted at a node (stop at its fork). The "go to this
+  // branch" target for folder-style navigation; see branchEndRaw.
+  const branchEnd = (nodeId: string): string => branchEndRaw(nodes, nodeId) ?? nodeId;
+
   // Folders effective on the current branch: conversation-level (node_id null)
   // plus any attached to a node on the active path (ancestor-or-self).
   const branchFolders = (): Attachment[] => {
@@ -741,6 +767,7 @@ export function useStore() {
     forkPoints,
     branchesAt,
     deepestLeaf,
+    branchEnd,
     branchFolders,
 
     // --- actions ---
@@ -787,4 +814,6 @@ export const __test = {
   branchesAt: (nodeId: string): number => branchesAtRaw(state.tree?.nodes ?? [], nodeId),
   deepestLeaf: (nodeId: string): string =>
     deepestLeafRaw(state.tree?.nodes ?? [], nodeId) ?? nodeId,
+  branchEnd: (nodeId: string): string =>
+    branchEndRaw(state.tree?.nodes ?? [], nodeId) ?? nodeId,
 };

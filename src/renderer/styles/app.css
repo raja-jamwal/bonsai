@@ -1035,6 +1035,22 @@
   border-radius: var(--r-pill);
   font-weight: 500;
   white-space: nowrap;
+  color: var(--fork-ink);
+  transition: background var(--t-fast) ease;
+}
+.fork-marker .fork-chip:hover,
+.fork-marker .fork-chip[aria-expanded='true'] {
+  background: var(--brand-tint-2);
+}
+.fork-marker .fork-chip .crumb-caret {
+  display: inline-flex;
+  opacity: 0.75;
+}
+/* Center the branch menu under the chip (the chip itself is centered between the
+   marker's two dashed rules). */
+.fork-marker .crumb-menu.fork-menu {
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 /* Draft-branch affordance shown after the stream when "Fork from here" is armed. */

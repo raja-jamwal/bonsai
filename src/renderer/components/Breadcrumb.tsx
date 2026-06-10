@@ -77,9 +77,12 @@ export function Breadcrumb() {
     store.setOpenDropdown(openDropdownId === id ? null : id);
   }
 
-  // Switch to the head leaf of the branch rooted at `node` (folder-nav "open").
+  // Open the branch rooted at `node` (folder-nav "open"): park at that branch's
+  // own fork point (its segment end), not a descendant leaf — so clicking an
+  // ancestor crumb (root, a parent fork) is always a visible move rather than a
+  // no-op that dives back to the current leaf. See store.branchEnd.
   function switchToBranch(node: MessageNode): void {
-    void store.switchLeaf(store.deepestLeaf(node.id));
+    void store.switchLeaf(store.branchEnd(node.id));
   }
 
   function renameCurrent(): void {

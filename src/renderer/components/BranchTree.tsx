@@ -55,8 +55,11 @@ export function BranchTree() {
     return isFork ? 'git-branch' : 'circle';
   }
 
+  // Open a branch: park at its own fork point (segment end), not a descendant
+  // leaf — so clicking a parent/ancestor branch is a visible move rather than a
+  // no-op that dives back to the current leaf. See store.branchEnd.
   function switchToBranch(head: MessageNode): void {
-    void store.switchLeaf(store.deepestLeaf(head.id));
+    void store.switchLeaf(store.branchEnd(head.id));
   }
 
   /** A "+ N replies" stub for the linear messages inside a segment. */
