@@ -52,7 +52,7 @@
 
   /* ---- Layout constants (handoff "Spacing" / "Layout") --------------- */
   --sidebar-w: 280px;       /* fixed left sidebar */
-  --content-max: 760px;     /* conversation column max-width */
+  --content-max: 920px;     /* conversation column max-width (stream + composer) */
   --content-pad: 32px;      /* conversation column horizontal padding */
   --msg-gap: 28px;          /* vertical gap between messages */
 

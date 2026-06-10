@@ -358,6 +358,56 @@ describe('Fork e2e — every message is forkable', () => {
     expect(store.deepestLeaf(byContent('reply:b2').id)).toBe(byContent('reply:b2').id);
   });
 
+  it('branchEnd stops at the branch fork point, where deepestLeaf would dive past it', async () => {
+    await store.sendTurn('hello');
+    await tick();
+    const root = byContent('hello'); // root user node
+    const fork = byContent('reply:hello'); // assistant that splits
+    await store.sendTurn('b1');
+    await tick();
+    store.forkFrom(fork.id);
+    await store.sendTurn('b2');
+    await tick();
+
+    // The root segment (hello → reply:hello) ENDS at the fork: branchEnd parks
+    // there ("go to this branch"), while deepestLeaf dives past it to a leaf.
+    expect(store.branchEnd(root.id)).toBe(fork.id);
+    expect(store.deepestLeaf(root.id)).toBe(byContent('reply:b1').id);
+    // On the fork node itself, branchEnd is the fork (already has >1 child).
+    expect(store.branchEnd(fork.id)).toBe(fork.id);
+    // On a linear leaf branch, branchEnd == the leaf — parity with deepestLeaf,
+    // so leaf-branch navigation is unchanged by the fix.
+    expect(store.branchEnd(byContent('reply:b2').id)).toBe(byContent('reply:b2').id);
+  });
+
+  it('opening an ancestor branch moves to its fork, not back to the current leaf (regression: deepestLeaf made it a silent no-op)', async () => {
+    await store.sendTurn('hello');
+    await tick();
+    const root = byContent('hello');
+    const fork = byContent('reply:hello');
+    await store.sendTurn('b1'); // first child branch — what deepestLeaf dives to
+    await tick();
+    store.forkFrom(fork.id);
+    await store.sendTurn('b2');
+    await tick();
+
+    // Sit on b1 (the first-child branch, which deepestLeaf(root) also resolves to).
+    await store.switchLeaf(byContent('reply:b1').id);
+    await tick();
+    const current = store.getState().activeLeafId;
+
+    // Clicking the root/ancestor branch must land somewhere ELSE than where we
+    // already are. The old deepestLeaf target equalled `current` → nothing moved;
+    // branchEnd parks at the fork, a visible change.
+    expect(store.deepestLeaf(root.id)).toBe(current); // the bug shape
+    expect(store.branchEnd(root.id)).not.toBe(current); // the fix
+    expect(store.branchEnd(root.id)).toBe(fork.id);
+
+    await store.switchLeaf(store.branchEnd(root.id));
+    await tick();
+    expect(store.getState().activeLeafId).toBe(fork.id); // moved to the fork level
+  });
+
   it('Stop reaches the bridge with the streaming node id (regression: window.bridge was undefined)', async () => {
     await seedTwoTurns();
     const leaf = byContent('reply:C'); // the latest assistant (what Composer aborts)

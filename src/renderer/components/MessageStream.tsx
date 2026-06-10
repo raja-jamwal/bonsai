@@ -15,12 +15,14 @@
 // Hover actions (component 8): Copy; trash (all messages); coral
 // "Fork from here" -> store.forkFrom(node.id), on both roles.
 //
-// Inline fork-point marker (component 7): after any on-path node with >1 child,
-// a dashed marker offers switching to a sibling branch.
+// Inline fork-point marker (component 7): after any on-path node where the
+// conversation diverges, a dashed marker labels how many branches split off and
+// is itself a dropdown to switch to any of them (mirrors the breadcrumb fork
+// chips; shares the global openDropdownId so only one menu is open at a time).
 //
 // A streaming caret shows while the last assistant node status === 'streaming'
 // (driven by the .msg.streaming CSS rule).
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore } from '../state/store';
 import { Icon } from './Icon';
 import { Markdown } from './Markdown';
@@ -45,6 +47,17 @@ function Sparkle() {
   );
 }
 
+/** Short, readable label for a branch head — its title, else a content snippet. */
+function branchLabel(node: MessageNode, fallback: string): string {
+  if (node.title && node.title.trim()) {
+    const t = node.title.trim();
+    return t.length > 32 ? `${t.slice(0, 32)}…` : t;
+  }
+  const text = node.content.trim().replace(/\s+/g, ' ');
+  if (!text) return fallback;
+  return text.length > 32 ? `${text.slice(0, 32)}…` : text;
+}
+
 /** Map a raw activity label to a human-readable string. */
 function formatActivityLabel(label: string): string {
   if (label === 'thinking') return 'Thinking…';
@@ -56,7 +69,29 @@ function formatActivityLabel(label: string): string {
 export function MessageStream() {
   const store = useStore();
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const { openDropdownId } = store;
   const path = store.activePath();
+
+  // Close the fork-point dropdown on outside click / ESC (handoff §"Dropdowns").
+  // Shares store.openDropdownId, so this also coexists with the breadcrumb menus.
+  useEffect(() => {
+    if (!openDropdownId) return;
+    const onClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.crumb-dropdown')) store.setOpenDropdown(null);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') store.setOpenDropdown(null);
+    };
+    window.addEventListener('click', onClick);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('click', onClick);
+      window.removeEventListener('keydown', onKey);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openDropdownId]);
+
   if (path.length === 0) return null;
 
   function copy(text: string): void {
@@ -77,23 +112,78 @@ export function MessageStream() {
   }
 
   /**
-   * Inline fork-point marker — a purely informational dashed divider rendered
-   * AFTER an assistant answer where the conversation diverges, labelling how many
-   * branches split off there. The count is a tree property (store.branchesAt), so
-   * it reads the same from any branch. Navigation lives in the left branch tree;
-   * starting a new branch uses the answer's own "Fork from here" hover action, so
-   * the marker carries no button. We only mark assistant nodes.
+   * The branch heads diverging at an assistant answer, matching store.branchesAt's
+   * two shapes (see branchesAtRaw): a continuation fork (the answer has >1 child)
+   * lists those children; an answer fork (regenerate / leaf-fork) lists the answer
+   * plus its siblings. `activeId` is whichever head the current path runs through.
+   */
+  function forkBranches(node: MessageNode): {
+    heads: MessageNode[];
+    activeId: string | null;
+  } {
+    const children = store.childrenOf(node.id);
+    if (children.length > 1) {
+      const active = children.find((c) => store.isOnPath(c.id));
+      return { heads: children, activeId: active?.id ?? null };
+    }
+    const siblings = store.siblingsOf(node.id); // children of parent, incl. node
+    if (siblings.length > 1) {
+      const active = siblings.find((s) => store.isOnPath(s.id)) ?? node;
+      return { heads: siblings, activeId: active.id };
+    }
+    return { heads: [], activeId: null };
+  }
+
+  /**
+   * Inline fork-point marker — a dashed divider rendered AFTER an assistant answer
+   * where the conversation diverges. The chip labels how many branches split off
+   * (a tree property, so it reads the same from any branch) and is a dropdown to
+   * switch to any of them: selecting a branch re-points the active leaf to that
+   * branch's fork point (store.branchEnd -> switchLeaf), the same move as the
+   * branch tree and breadcrumb fork chips. We only mark assistant nodes.
    */
   function renderForkMarker(node: MessageNode): React.ReactNode {
     if (node.role !== 'assistant') return null;
-    const totalBranches = store.branchesAt(node.id);
-    if (totalBranches < 2) return null;
+    const { heads, activeId } = forkBranches(node);
+    if (heads.length < 2) return null;
+
+    const ddId = `fork:${node.id}`;
+    const open = openDropdownId === ddId;
 
     return (
       <div className={'fork-marker'} key={'fork-' + node.id}>
-        <span className={'fork-chip'}>
-          🌿 Fork point · {totalBranches} branches
-        </span>
+        <div className="crumb-dropdown">
+          <button
+            type="button"
+            className="fork-chip"
+            aria-expanded={open}
+            title="Switch to another branch"
+            onClick={() => store.setOpenDropdown(open ? null : ddId)}
+          >
+            🌿 Fork point · {heads.length} branches
+            <span className="crumb-caret">
+              <Icon name="chevron-down" size={12} />
+            </span>
+          </button>
+          {open ? (
+            <div className="crumb-menu fork-menu">
+              {heads.map((h, i) => (
+                <button
+                  key={h.id}
+                  type="button"
+                  className={`crumb-menu-item${h.id === activeId ? ' active' : ''}`}
+                  onClick={() => {
+                    void store.switchLeaf(store.branchEnd(h.id));
+                    store.setOpenDropdown(null);
+                  }}
+                >
+                  <Icon name="git-branch" size={14} />
+                  {branchLabel(h, `Branch ${i + 1}`)}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
       </div>
     );
   }
