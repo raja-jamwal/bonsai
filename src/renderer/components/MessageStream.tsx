@@ -23,9 +23,11 @@
 // A streaming caret shows while the last assistant node status === 'streaming'
 // (driven by the .msg.streaming CSS rule).
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useStore } from '../state/store';
 import { Icon } from './Icon';
 import { Markdown } from './Markdown';
+import { forkMenuStyle } from './forkMenuPosition';
 import type { MessageNode } from '@shared/types';
 
 /** Inline 4-point coral sparkle (the Claude mark), matching the handoff SVG. */
@@ -69,25 +71,39 @@ function formatActivityLabel(label: string): string {
 export function MessageStream() {
   const store = useStore();
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  // Viewport-anchored rect of the open fork chip. The menu is portaled to <body>
+  // and positioned fixed off this rect so it escapes the stream's overflow clip
+  // (.stream has overflow-y:auto, which would otherwise chop a menu dropping
+  // below the chip). Captured at open time; the menu closes on scroll/resize.
+  const [forkAnchor, setForkAnchor] = useState<{ cx: number; top: number; bottom: number } | null>(
+    null
+  );
   const { openDropdownId } = store;
   const path = store.activePath();
 
-  // Close the fork-point dropdown on outside click / ESC (handoff §"Dropdowns").
-  // Shares store.openDropdownId, so this also coexists with the breadcrumb menus.
+  // Close the fork-point dropdown on outside click / ESC / scroll / resize. The
+  // menu lives in a body portal (class .fork-menu), so it's excluded from the
+  // outside-click test alongside the in-flow .crumb-dropdown trigger. Shares
+  // store.openDropdownId, so this coexists with the breadcrumb menus.
   useEffect(() => {
     if (!openDropdownId) return;
+    const close = () => store.setOpenDropdown(null);
     const onClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (!target.closest('.crumb-dropdown')) store.setOpenDropdown(null);
+      if (!target.closest('.crumb-dropdown') && !target.closest('.fork-menu')) close();
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') store.setOpenDropdown(null);
+      if (e.key === 'Escape') close();
     };
     window.addEventListener('click', onClick);
     window.addEventListener('keydown', onKey);
+    window.addEventListener('scroll', close, true); // capture: catch the inner stream scroll
+    window.addEventListener('resize', close);
     return () => {
       window.removeEventListener('click', onClick);
       window.removeEventListener('keydown', onKey);
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openDropdownId]);
@@ -150,6 +166,20 @@ export function MessageStream() {
     const ddId = `fork:${node.id}`;
     const open = openDropdownId === ddId;
 
+    function toggle(e: React.MouseEvent): void {
+      if (open) {
+        store.setOpenDropdown(null);
+        return;
+      }
+      const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      setForkAnchor({ cx: r.left + r.width / 2, top: r.top, bottom: r.bottom });
+      store.setOpenDropdown(ddId);
+    }
+
+    const menuStyle: React.CSSProperties = forkAnchor
+      ? forkMenuStyle(forkAnchor, window.innerHeight)
+      : {};
+
     return (
       <div className={'fork-marker'} key={'fork-' + node.id}>
         <div className="crumb-dropdown">
@@ -158,32 +188,35 @@ export function MessageStream() {
             className="fork-chip"
             aria-expanded={open}
             title="Switch to another branch"
-            onClick={() => store.setOpenDropdown(open ? null : ddId)}
+            onClick={toggle}
           >
             🌿 Fork point · {heads.length} branches
             <span className="crumb-caret">
               <Icon name="chevron-down" size={12} />
             </span>
           </button>
-          {open ? (
-            <div className="crumb-menu fork-menu">
-              {heads.map((h, i) => (
-                <button
-                  key={h.id}
-                  type="button"
-                  className={`crumb-menu-item${h.id === activeId ? ' active' : ''}`}
-                  onClick={() => {
-                    void store.switchLeaf(store.branchEnd(h.id));
-                    store.setOpenDropdown(null);
-                  }}
-                >
-                  <Icon name="git-branch" size={14} />
-                  {branchLabel(h, `Branch ${i + 1}`)}
-                </button>
-              ))}
-            </div>
-          ) : null}
         </div>
+        {open && forkAnchor
+          ? createPortal(
+              <div className="crumb-menu fork-menu" style={menuStyle}>
+                {heads.map((h, i) => (
+                  <button
+                    key={h.id}
+                    type="button"
+                    className={`crumb-menu-item${h.id === activeId ? ' active' : ''}`}
+                    onClick={() => {
+                      void store.switchLeaf(store.branchEnd(h.id));
+                      store.setOpenDropdown(null);
+                    }}
+                  >
+                    <Icon name="git-branch" size={14} />
+                    {branchLabel(h, `Branch ${i + 1}`)}
+                  </button>
+                ))}
+              </div>,
+              document.body
+            )
+          : null}
       </div>
     );
   }

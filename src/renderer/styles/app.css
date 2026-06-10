@@ -1046,11 +1046,15 @@
   display: inline-flex;
   opacity: 0.75;
 }
-/* Center the branch menu under the chip (the chip itself is centered between the
-   marker's two dashed rules). */
-.fork-marker .crumb-menu.fork-menu {
-  left: 50%;
+/* The branch menu is portaled to <body> and positioned fixed off the chip's
+   viewport rect (see MessageStream), so it escapes the stream's overflow clip.
+   `left` is the chip center; translateX(-50%) centers the menu on it. Both top
+   and bottom anchoring are supplied inline depending on up/down flip. */
+.crumb-menu.fork-menu {
+  position: fixed;
   transform: translateX(-50%);
+  max-height: 60vh;
+  overflow-y: auto;
 }
 
 /* Draft-branch affordance shown after the stream when "Fork from here" is armed. */

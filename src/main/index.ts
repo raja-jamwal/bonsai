@@ -5,7 +5,8 @@
 // Repo and ClaudeRunner, create the sandboxed window, register the IPC
 // handlers, and load the renderer (electron-vite dev URL or built file).
 
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, Menu } from 'electron';
+import { buildContextMenuTemplate } from './contextMenu.js';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { openDatabase, recoverOrphans } from './db/database.js';
@@ -51,6 +52,15 @@ function createWindow(): void {
   win.on('ready-to-show', () => win?.show());
   win.on('closed', () => {
     win = null;
+  });
+
+  // Right-click context menu: Electron ships no default one. Build it from the
+  // hit-test (see buildContextMenuTemplate) so editable fields get Cut/Paste and
+  // any selection gets Copy. Roles act on the focused webContents.
+  win.webContents.on('context-menu', (_e, params) => {
+    const items = buildContextMenuTemplate(params);
+    if (items.length === 0) return;
+    Menu.buildFromTemplate(items).popup({ window: win ?? undefined });
   });
 
   // electron-vite convention: in dev the renderer is served from a vite URL; in
