@@ -4,3 +4,7 @@ dist/
 .DS_Store
 *.log
 data/
+
+# Apple notarization secrets — never commit
+*.p8
+.env

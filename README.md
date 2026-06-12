@@ -42,6 +42,54 @@ npm run package    # build a distributable (electron-builder)
 The app window opens automatically. Data is stored in
 `~/Library/Application Support/Bonsai/bonsai.db`.
 
+## Building a signed & notarized DMG (macOS)
+
+`npm run package` produces `dist/Bonsai-<version>.dmg`. To make it open without a
+Gatekeeper warning it must be signed with a **Developer ID Application** cert and
+notarized by Apple.
+
+**One-time setup:**
+
+1. Install a *Developer ID Application* certificate into your login keychain
+   (Xcode → Settings → Accounts → Manage Certificates → + → Developer ID
+   Application). Confirm with `security find-identity -v -p codesigning`.
+2. Create an **App Store Connect API key** (App Store Connect → Users and Access
+   → Integrations → Keys, role ≥ Developer). Download the `.p8` (once) and note
+   the **Key ID** and **Issuer ID**.
+
+**Build:**
+
+```bash
+export APPLE_API_KEY=/absolute/path/AuthKey_XXXXXXXXXX.p8
+export APPLE_API_KEY_ID=XXXXXXXXXX
+export APPLE_API_ISSUER=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+npm run package
+```
+
+electron-builder auto-discovers the cert from the keychain, signs with the
+hardened runtime (`build/entitlements.mac.plist`), then notarizes and staples the
+app. Verify the result:
+
+```bash
+spctl -a -vvv --type install "dist/Bonsai-0.1.0.dmg"   # → "accepted, source=Notarized Developer ID"
+xcrun stapler validate "dist/Bonsai-0.1.0.dmg"
+```
+
+The API key is a secret — keep the `.p8` out of the repo (`*.p8` is gitignored).
+Without the `APPLE_API_*` env vars the build still signs but **skips
+notarization** (a warning is logged), so the DMG would still show the warning.
+
+If a transient `hdiutil detach` race during DMG creation leaves the *container*
+unsigned (the app inside is still notarized), finish it with:
+
+```bash
+set -a; source .env; set +a
+scripts/notarize-dmg.sh            # codesign → notarize → staple → verify the DMG
+```
+
+Verify either artifact: `spctl -a -t open --context context:primary-signature <dmg>`
+and `spctl -a -t execute <app>` should both report `source=Notarized Developer ID`.
+
 ## Known issue — macOS 26.5.1 (Code Signature Invalid)
 
 On macOS 26.5.1 the `claude` CLI binary (v2.1.168) is killed with

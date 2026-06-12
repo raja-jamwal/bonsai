@@ -16,16 +16,21 @@ files:
 asarUnpack:
   - "**/node_modules/better-sqlite3/**"
 
-# No Apple Developer ID — we ad-hoc sign in afterPack instead (electron-builder's
-# own signing stays disabled via identity:null). Ad-hoc signing is required on
-# Apple Silicon so the (repacked) bundle isn't rejected as "damaged".
-afterPack: scripts/afterPack.cjs
-
 mac:
   category: public.app-category.developer-tools
   target:
     - target: dmg
-  identity: null
+  # Sign with the "Developer ID Application" cert auto-discovered from the login
+  # keychain (CSC_IDENTITY_AUTO_DISCOVERY, default on). Hardened runtime +
+  # entitlements are required for notarization.
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  # Notarization runs automatically when the App Store Connect API key env vars
+  # are present (APPLE_API_KEY / APPLE_API_KEY_ID / APPLE_API_ISSUER); it is
+  # skipped with a warning when they are absent, so unsigned local builds still
+  # work.
 
 dmg:
   title: ${productName} ${version}
